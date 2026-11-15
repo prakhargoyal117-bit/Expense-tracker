@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedOwner(userId) {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.uid == userId;
+    }
+
+    function isValidVault(data, userId) {
+      return data.keys().hasAll([
+          'ownerId',
+          'version',
+          'algorithm',
+          'kdf',
+          'iterations',
+          'saltBase64',
+          'ivBase64',
+          'ciphertextBase64',
+          'hasCustomPassphrase',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId',
+          'version',
+          'algorithm',
+          'kdf',
+          'iterations',
+          'saltBase64',
+          'ivBase64',
+          'ciphertextBase64',
+          'hasCustomPassphrase',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.ownerId is string
+        && isValidId(data.ownerId)
+        && data.ownerId == userId
+        && data.version is number
+        && data.version == 1
+        && data.algorithm is string
+        && data.algorithm == 'AES-256-GCM'
+        && data.kdf is string
+        && data.kdf == 'PBKDF2-SHA256'
+        && data.iterations is number
+        && data.iterations >= 100000
+        && data.iterations <= 1000000
+        && data.saltBase64 is string
+        && data.saltBase64.size() >= 16
+        && data.saltBase64.size() <= 64
+        && data.ivBase64 is string
+        && data.ivBase64.size() >= 12
+        && data.ivBase64.size() <= 64
+        && data.ciphertextBase64 is string
+        && data.ciphertextBase64.size() >= 16
+        && data.ciphertextBase64.size() <= 900000
+        && data.hasCustomPassphrase is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /vaults/{userId} {
+      allow get: if isValidId(userId) && isVerifiedOwner(userId);
+      allow list: if false;
+
+      allow create: if isValidId(userId)
+        && isVerifiedOwner(userId)
+        && isValidVault(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isValidId(userId)
+        && isVerifiedOwner(userId)
+        && isValidVault(incoming(), userId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'saltBase64',
+          'ivBase64',
+          'ciphertextBase64',
+          'hasCustomPassphrase',
+          'iterations',
+          'updatedAt'
+        ]);
+
+      allow delete: if isValidId(userId) && isVerifiedOwner(userId);
+    }
+  }
+}

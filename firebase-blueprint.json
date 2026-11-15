@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "EncryptedVault": {
+      "title": "EncryptedVault",
+      "description": "End-to-end encrypted user expense vault envelope stored as AES-256-GCM ciphertext.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the vault owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "version": {
+          "type": "number",
+          "description": "Vault envelope format version."
+        },
+        "algorithm": {
+          "type": "string",
+          "description": "Symmetric cipher identifier.",
+          "enum": ["AES-256-GCM"],
+          "maxLength": 32
+        },
+        "kdf": {
+          "type": "string",
+          "description": "Key derivation function identifier.",
+          "enum": ["PBKDF2-SHA256"],
+          "maxLength": 32
+        },
+        "iterations": {
+          "type": "number",
+          "description": "PBKDF2 iteration count."
+        },
+        "saltBase64": {
+          "type": "string",
+          "description": "Base64-encoded random 128-bit salt.",
+          "minLength": 16,
+          "maxLength": 64
+        },
+        "ivBase64": {
+          "type": "string",
+          "description": "Base64-encoded random 96-bit AES-GCM IV.",
+          "minLength": 12,
+          "maxLength": 64
+        },
+        "ciphertextBase64": {
+          "type": "string",
+          "description": "Base64-encoded AES-256-GCM ciphertext.",
+          "minLength": 16,
+          "maxLength": 900000
+        },
+        "hasCustomPassphrase": {
+          "type": "boolean",
+          "description": "Whether the vault requires a user-chosen passphrase."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the cloud vault was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the latest encrypted sync."
+        }
+      },
+      "required": [
+        "ownerId",
+        "version",
+        "algorithm",
+        "kdf",
+        "iterations",
+        "saltBase64",
+        "ivBase64",
+        "ciphertextBase64",
+        "hasCustomPassphrase",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/vaults/{userId}": {
+      "schema": { "$ref": "#/entities/EncryptedVault" },
+      "description": "Stores each authenticated user's AES-256-GCM encrypted expense vault envelope."
+    }
+  }
+}
