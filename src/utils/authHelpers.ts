@@ -1,6 +1,35 @@
+export function detectInAppBrowserHint(userAgent?: string): string | null {
+  if (!userAgent) return null;
+  if (/(FBAN|FBAV|Instagram|WhatsApp|Telegram|Line\/|MicroMessenger|\bwv\b)/i.test(userAgent)) {
+    return 'In-app browsers (WhatsApp, Instagram, Telegram) block Google login popups. Tap the menu (⋮) and choose "Open in Chrome" or "Open in Safari".';
+  }
+  return null;
+}
+
+export function shouldOfferRedirectFallback(error: unknown): boolean {
+  const raw =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : '';
+  const code =
+    typeof error === 'object' && error !== null && 'code' in error
+      ? String((error as { code?: unknown }).code ?? '')
+      : '';
+  const combined = `${code} ${raw}`.toLowerCase();
+
+  return (
+    combined.includes('auth/cancelled-popup-request') ||
+    combined.includes('auth/popup-blocked') ||
+    combined.includes('auth/popup-closed-by-user')
+  );
+}
+
 export function formatFirebaseAuthError(
   error: unknown,
   currentHostname?: string,
+  userAgent?: string,
 ): string {
   const host = currentHostname?.trim() || 'this domain';
   const rawMessage =
@@ -16,21 +45,31 @@ export function formatFirebaseAuthError(
       : '';
 
   const combined = `${code} ${rawMessage}`.toLowerCase();
+  const inAppHint = detectInAppBrowserHint(userAgent);
 
   if (combined.includes('auth/unauthorized-domain')) {
     return `Domain "${host}" is not authorized for Google Sign-In in Firebase Authentication yet. Add "${host}" under Firebase Console → Authentication → Settings → Authorized domains, then try again.`;
   }
 
   if (combined.includes('auth/popup-blocked')) {
-    return 'Google Sign-In popup was blocked by your browser. Please allow popups for this site in browser settings and click Sign in again.';
+    return (
+      inAppHint ??
+      'Google Sign-In popup was blocked by your browser. Allow popups for this site or use "Try Full-Page Redirect Sign-In Instead" below.'
+    );
   }
 
   if (combined.includes('auth/popup-closed-by-user')) {
-    return 'Google Sign-In window was closed before finishing. Complete sign-in and allow read-only Gmail access to connect.';
+    return (
+      inAppHint ??
+      'Google Sign-In window closed before completing login. Finish signing in (or use Full-Page Redirect Sign-In below) and allow read-only Gmail access.'
+    );
   }
 
   if (combined.includes('auth/cancelled-popup-request')) {
-    return 'Another Google Sign-In popup is already active. Finish or close it, then try again.';
+    return (
+      inAppHint ??
+      'The browser canceled the Google Sign-In popup before it appeared (often due to a double-tap, popup blocker, or mobile browser tab switch). Click "Try Full-Page Redirect Sign-In Instead" below.'
+    );
   }
 
   if (combined.includes('auth/operation-not-allowed')) {

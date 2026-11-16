@@ -1,8 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formatFirebaseAuthError, formatGmailApiError } from './authHelpers';
+import {
+  detectInAppBrowserHint,
+  formatFirebaseAuthError,
+  formatGmailApiError,
+  shouldOfferRedirectFallback,
+} from './authHelpers';
 
-test('formatFirebaseAuthError maps unauthorized-domain and popup-blocked cleanly', () => {
+test('formatFirebaseAuthError maps unauthorized-domain, popup-blocked, and cancelled-popup-request cleanly', () => {
   const domainMsg = formatFirebaseAuthError(
     { code: 'auth/unauthorized-domain', message: 'Firebase: Error (auth/unauthorized-domain).' },
     'ais-pre-example.run.app',
@@ -16,11 +21,41 @@ test('formatFirebaseAuthError maps unauthorized-domain and popup-blocked cleanly
   );
   assert.ok(popupMsg.toLowerCase().includes('popup was blocked'));
 
+  const cancelledMsg = formatFirebaseAuthError(
+    { code: 'auth/cancelled-popup-request', message: 'cancelled' },
+    'project2-beryl-eta.vercel.app',
+  );
+  assert.ok(cancelledMsg.includes('Full-Page Redirect Sign-In'));
+
   const closedMsg = formatFirebaseAuthError({
     code: 'auth/popup-closed-by-user',
     message: 'closed',
   });
-  assert.ok(closedMsg.toLowerCase().includes('closed before finishing'));
+  assert.ok(closedMsg.toLowerCase().includes('closed before completing'));
+});
+
+test('shouldOfferRedirectFallback and detectInAppBrowserHint detect mobile webview & popup failures', () => {
+  assert.equal(
+    shouldOfferRedirectFallback({ code: 'auth/cancelled-popup-request' }),
+    true,
+  );
+  assert.equal(
+    shouldOfferRedirectFallback({ code: 'auth/popup-blocked' }),
+    true,
+  );
+  assert.equal(
+    shouldOfferRedirectFallback({ code: 'auth/unauthorized-domain' }),
+    false,
+  );
+
+  const hint = detectInAppBrowserHint(
+    'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/116.0 Mobile Safari/537.36 [FBAN/EMA;WhatsApp]',
+  );
+  assert.ok(hint?.includes('Open in Chrome'));
+  assert.equal(
+    detectInAppBrowserHint('Mozilla/5.0 Chrome/120.0.0.0 Safari/537.36'),
+    null,
+  );
 });
 
 test('formatGmailApiError surfaces expired tokens and missing Gmail scopes clearly', () => {

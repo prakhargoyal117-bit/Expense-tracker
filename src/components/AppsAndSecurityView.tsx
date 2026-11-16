@@ -48,6 +48,8 @@ interface AppsAndSecurityViewProps {
   monthlyBudget: number;
   googleUser: User | null;
   hasGmailToken: boolean;
+  isSigningInGoogle: boolean;
+  showRedirectFallback: boolean;
   isSyncingGmail: boolean;
   gmailStatus: StatusBanner | null;
   appSyncStatus: StatusBanner | null;
@@ -66,6 +68,7 @@ interface AppsAndSecurityViewProps {
   onResetDemoVault: () => void;
   onOpenCreateVault: (mode: 'create' | 'import') => void;
   onGoogleSignIn: (scanScope?: GmailScanScope) => Promise<void>;
+  onGoogleRedirectSignIn: () => Promise<void>;
   onGoogleSignOut: () => Promise<void>;
   onScanGmailReceipts: (scope: GmailScanScope) => Promise<void>;
   onImportPaymentReceipts: (rawText: string) => {
@@ -91,6 +94,8 @@ export function AppsAndSecurityView({
   monthlyBudget,
   googleUser,
   hasGmailToken,
+  isSigningInGoogle,
+  showRedirectFallback,
   isSyncingGmail,
   gmailStatus,
   appSyncStatus,
@@ -109,6 +114,7 @@ export function AppsAndSecurityView({
   onResetDemoVault,
   onOpenCreateVault,
   onGoogleSignIn,
+  onGoogleRedirectSignIn,
   onGoogleSignOut,
   onScanGmailReceipts,
   onImportPaymentReceipts,
@@ -291,27 +297,40 @@ export function AppsAndSecurityView({
             </div>
 
             {gmailStatus && (
-              <p
+              <div
                 role={gmailStatus.type === 'error' ? 'alert' : 'status'}
                 data-testid="gmail-status-banner"
-                className={`text-xs font-medium rounded-lg px-3 py-2 border ${
+                className={`text-xs font-medium rounded-lg px-3 py-2 border space-y-2 ${
                   gmailStatus.type === 'error'
                     ? 'text-red-900 bg-red-50 border-red-200'
                     : 'text-teal-900 bg-teal-50 border-teal-200'
                 }`}
               >
-                {gmailStatus.text}
-              </p>
+                <p>{gmailStatus.text}</p>
+                {showRedirectFallback && gmailStatus.type === 'error' && (
+                  <button
+                    type="button"
+                    disabled={isSigningInGoogle}
+                    onClick={() => void onGoogleRedirectSignIn()}
+                    className="inline-flex items-center px-3 py-1.5 text-[11px] font-semibold text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-50 rounded-md transition-colors"
+                  >
+                    Try Full-Page Redirect Sign-In Instead
+                  </button>
+                )}
+              </div>
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
               {!googleUser || !hasGmailToken ? (
                 <GoogleSignInButton
+                  disabled={isSigningInGoogle}
                   onClick={() => void onGoogleSignIn(gmailScanScope)}
                   label={
-                    googleUser
-                      ? 'Re-authorize Gmail Access'
-                      : 'Sign in with Google for Gmail'
+                    isSigningInGoogle
+                      ? 'Waiting for Google Sign-In...'
+                      : googleUser
+                        ? 'Re-authorize Gmail Access'
+                        : 'Sign in with Google for Gmail'
                   }
                 />
               ) : (
@@ -515,10 +534,11 @@ export function AppsAndSecurityView({
             {(!googleUser || !hasGmailToken) && (
               <button
                 type="button"
+                disabled={isSigningInGoogle}
                 onClick={() => void onGoogleSignIn(gmailScanScope)}
-                className="px-3 py-1 text-[11px] font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-md transition-colors whitespace-nowrap"
+                className="px-3 py-1 text-[11px] font-semibold text-white bg-teal-700 hover:bg-teal-800 disabled:opacity-50 rounded-md transition-colors whitespace-nowrap"
               >
-                Connect Gmail Now
+                {isSigningInGoogle ? 'Opening Google...' : 'Connect Gmail Now'}
               </button>
             )}
           </div>
@@ -856,10 +876,27 @@ export function AppsAndSecurityView({
                 <p className="text-xs text-slate-600">
                   Sign in with your Google account to sync your encrypted vault across devices and restore it anywhere using your passphrase.
                 </p>
-                <GoogleSignInButton
-                  onClick={() => void onGoogleSignIn(gmailScanScope)}
-                  label="Sign in with Google to Sync Vault"
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <GoogleSignInButton
+                    disabled={isSigningInGoogle}
+                    onClick={() => void onGoogleSignIn(gmailScanScope)}
+                    label={
+                      isSigningInGoogle
+                        ? 'Waiting for Google Sign-In...'
+                        : 'Sign in with Google to Sync Vault'
+                    }
+                  />
+                  {showRedirectFallback && (
+                    <button
+                      type="button"
+                      disabled={isSigningInGoogle}
+                      onClick={() => void onGoogleRedirectSignIn()}
+                      className="px-3 py-2 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-50 rounded-lg transition-colors"
+                    >
+                      Try Redirect Sign-In
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="space-y-4 pt-2 border-t border-slate-100">

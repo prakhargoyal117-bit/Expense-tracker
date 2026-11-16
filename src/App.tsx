@@ -34,7 +34,10 @@ import {
   generateExpensesCsv,
   getAvailableMonths,
 } from './utils/analytics';
-import { formatFirebaseAuthError } from './utils/authHelpers';
+import {
+  formatFirebaseAuthError,
+  shouldOfferRedirectFallback,
+} from './utils/authHelpers';
 import {
   parsePaymentAppReceiptBatch,
   parseStatementCsv,
@@ -49,12 +52,14 @@ import {
 } from './utils/reminders';
 import {
   clearInMemoryGmailToken,
+  consumeGoogleRedirectResult,
   deleteCloudEncryptedVault,
   fetchCloudEncryptedVault,
   getInMemoryGmailToken,
   initFirebaseAuth,
   saveCloudEncryptedVault,
   signInWithGoogleForVaultAndGmail,
+  signInWithGoogleRedirectFallback,
   signOutGoogle,
   testFirestoreConnection,
 } from './services/firebaseService';
@@ -116,6 +121,9 @@ export default function App() {
   // Google Auth, Gmail Sync & Cloud Encrypted Sync state
   const [googleUser, setGoogleUser] = useState<User | null>(null);
   const [hasGmailToken, setHasGmailToken] = useState<boolean>(false);
+  const [isSigningInGoogle, setIsSigningInGoogle] = useState<boolean>(false);
+  const [showRedirectFallback, setShowRedirectFallback] = useState<boolean>(false);
+  const [pendingRedirectScan, setPendingRedirectScan] = useState<boolean>(false);
   const [isSyncingGmail, setIsSyncingGmail] = useState<boolean>(false);
   const [gmailStatus, setGmailStatus] = useState<{
     type: 'success' | 'error' | 'info';
@@ -158,13 +166,43 @@ export default function App() {
     [],
   );
 
-  // Initialize Firebase connection check and auth state listener
+  // Initialize Firebase connection check, auth state listener, and redirect sign-in result
   useEffect(() => {
     void testFirestoreConnection();
     const unsub = initFirebaseAuth((user, token) => {
       setGoogleUser(user);
       setHasGmailToken(Boolean(token));
     });
+
+    void consumeGoogleRedirectResult()
+      .then((res) => {
+        if (!res) return;
+        setGoogleUser(res.user);
+        setHasGmailToken(Boolean(res.accessToken));
+        setActiveSection('security');
+        setShowRedirectFallback(false);
+        if (res.accessToken) {
+          setCloudSyncStatus(
+            `Signed in as ${res.user.email}. Cloud encrypted vault sync is ready.`,
+          );
+          setPendingRedirectScan(true);
+        } else {
+          const missingMsg = `Signed in as ${res.user.email}, but Gmail read-only permission was not checked on the Google consent screen. Click "Re-authorize Gmail Access" and tick the Gmail box.`;
+          setGmailStatus({ type: 'error', text: missingMsg });
+          setCloudSyncStatus(missingMsg);
+        }
+      })
+      .catch((err) => {
+        const host =
+          typeof window !== 'undefined' ? window.location.hostname : undefined;
+        const ua =
+          typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
+        const msg = formatFirebaseAuthError(err, host, ua);
+        setActiveSection('security');
+        setGmailStatus({ type: 'error', text: msg });
+        setCloudSyncStatus(msg);
+      });
+
     return () => unsub();
   }, []);
 
@@ -696,7 +734,13 @@ export default function App() {
 
   // Google Sign-In for Gmail + Cloud Vault Sync
   const handleGoogleSignIn = async (scanScope: GmailScanScope = 'all') => {
-    setGmailStatus(null);
+    if (isSigningInGoogle) return;
+    setIsSigningInGoogle(true);
+    setShowRedirectFallback(false);
+    setGmailStatus({
+      type: 'info',
+      text: 'Opening Google Sign-In window...',
+    });
     setCloudSyncStatus(null);
     setAppSyncStatus(null);
     try {
@@ -717,16 +761,50 @@ export default function App() {
     } catch (err) {
       const host =
         typeof window !== 'undefined' ? window.location.hostname : undefined;
-      const msg = formatFirebaseAuthError(err, host);
+      const ua =
+        typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
+      const msg = formatFirebaseAuthError(err, host, ua);
+      setShowRedirectFallback(shouldOfferRedirectFallback(err));
       setGmailStatus({ type: 'error', text: msg });
       setCloudSyncStatus(msg);
+    } finally {
+      setIsSigningInGoogle(false);
     }
   };
+
+  const handleGoogleRedirectSignIn = async () => {
+    if (isSigningInGoogle) return;
+    setIsSigningInGoogle(true);
+    setGmailStatus({
+      type: 'info',
+      text: 'Redirecting to Google Sign-In...',
+    });
+    try {
+      await signInWithGoogleRedirectFallback();
+    } catch (err) {
+      const host =
+        typeof window !== 'undefined' ? window.location.hostname : undefined;
+      const ua =
+        typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
+      const msg = formatFirebaseAuthError(err, host, ua);
+      setGmailStatus({ type: 'error', text: msg });
+      setCloudSyncStatus(msg);
+      setIsSigningInGoogle(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!pendingRedirectScan || isBootstrapping || isLocked || !vault) return;
+    setPendingRedirectScan(false);
+    void handleScanGmailReceipts('all', googleUser?.email);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingRedirectScan, isBootstrapping, isLocked, vault]);
 
   const handleGoogleSignOut = async () => {
     await signOutGoogle();
     setGoogleUser(null);
     setHasGmailToken(false);
+    setShowRedirectFallback(false);
     setGmailStatus(null);
     setAppSyncStatus(null);
     setCloudSyncStatus(null);
@@ -1281,6 +1359,8 @@ export default function App() {
               monthlyBudget={vault.monthlyBudget}
               googleUser={googleUser}
               hasGmailToken={hasGmailToken}
+              isSigningInGoogle={isSigningInGoogle}
+              showRedirectFallback={showRedirectFallback}
               isSyncingGmail={isSyncingGmail}
               gmailStatus={gmailStatus}
               appSyncStatus={appSyncStatus}
@@ -1301,6 +1381,7 @@ export default function App() {
                 setCreateVaultModal({ open: true, mode })
               }
               onGoogleSignIn={handleGoogleSignIn}
+              onGoogleRedirectSignIn={handleGoogleRedirectSignIn}
               onGoogleSignOut={handleGoogleSignOut}
               onScanGmailReceipts={handleScanGmailReceipts}
               onImportPaymentReceipts={handleImportPaymentReceipts}

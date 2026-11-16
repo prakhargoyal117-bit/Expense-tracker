@@ -2,8 +2,10 @@ import { initializeApp } from 'firebase/app';
 import {
   GoogleAuthProvider,
   getAuth,
+  getRedirectResult,
   onAuthStateChanged,
   signInWithPopup,
+  signInWithRedirect,
   signOut,
   type User,
 } from 'firebase/auth';
@@ -40,6 +42,10 @@ provider.setCustomParameters({
 // Keep OAuth token strictly in memory (never in localStorage or sessionStorage)
 let cachedGmailAccessToken: string | null = null;
 let isSigningIn = false;
+let activeSignInPromise: Promise<{
+  user: User;
+  accessToken: string | null;
+}> | null = null;
 
 export enum OperationType {
   CREATE = 'create',
@@ -124,15 +130,44 @@ export async function signInWithGoogleForVaultAndGmail(): Promise<{
   user: User;
   accessToken: string | null;
 }> {
-  isSigningIn = true;
-  try {
-    const result = await signInWithPopup(auth, provider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    cachedGmailAccessToken = credential?.accessToken ?? null;
-    return { user: result.user, accessToken: cachedGmailAccessToken };
-  } finally {
-    isSigningIn = false;
+  if (activeSignInPromise) {
+    return activeSignInPromise;
   }
+
+  isSigningIn = true;
+  activeSignInPromise = (async () => {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      cachedGmailAccessToken = credential?.accessToken ?? null;
+      return { user: result.user, accessToken: cachedGmailAccessToken };
+    } finally {
+      isSigningIn = false;
+      activeSignInPromise = null;
+    }
+  })();
+
+  return activeSignInPromise;
+}
+
+export async function signInWithGoogleRedirectFallback(): Promise<void> {
+  if (typeof window !== 'undefined' && window.self !== window.top) {
+    throw new Error(
+      'Redirect sign-in cannot run inside an embedded preview frame. Allow popups or open the standalone app URL in a browser tab.',
+    );
+  }
+  await signInWithRedirect(auth, provider);
+}
+
+export async function consumeGoogleRedirectResult(): Promise<{
+  user: User;
+  accessToken: string | null;
+} | null> {
+  const result = await getRedirectResult(auth);
+  if (!result) return null;
+  const credential = GoogleAuthProvider.credentialFromResult(result);
+  cachedGmailAccessToken = credential?.accessToken ?? null;
+  return { user: result.user, accessToken: cachedGmailAccessToken };
 }
 
 export function getInMemoryGmailToken(): string | null {
