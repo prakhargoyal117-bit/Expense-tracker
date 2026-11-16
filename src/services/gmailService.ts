@@ -1,4 +1,5 @@
-import type { ExpenseEntry } from '../types/expense';
+import type { AppId, ExpenseEntry } from '../types/expense';
+import { formatGmailApiError } from '../utils/authHelpers';
 import {
   type GmailRawMessage,
   parseGmailReceiptMessage,
@@ -6,6 +7,13 @@ import {
 } from '../utils/gmailParser';
 
 export type GmailScanScope = 'all' | 'orders' | 'payment_apps';
+
+export class GmailAuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'GmailAuthError';
+  }
+}
 
 interface GmailListResponse {
   messages?: Array<{ id: string; threadId: string }>;
@@ -82,16 +90,33 @@ const ORDER_APPS_QUERY =
 const PAYMENT_APPS_QUERY =
   '("Google Pay" OR GPay OR PhonePe OR Paytm OR BHIM OR CRED OR Razorpay OR Cashfree OR "Amazon Pay" OR MobiKwik OR Freecharge OR PayZapp OR UPI) (paid OR debited OR "payment receipt" OR "payment successful" OR "transaction id" OR "UPI Ref") -OTP -"verification code" -"scratch card"';
 
+const APP_SPECIFIC_QUERIES: Partial<Record<AppId, string>> = {
+  zomato: '(from:zomato OR subject:zomato) (order OR receipt OR invoice OR delivered OR paid)',
+  swiggy: '(from:swiggy OR subject:swiggy OR instamart) (order OR receipt OR invoice OR delivered OR paid)',
+  eatsure: '(from:eatsure OR subject:eatsure OR "eat sure" OR ovenstory) (order OR receipt OR invoice OR delivered OR paid)',
+  amazon: '(from:amazon OR subject:amazon) (order OR receipt OR invoice OR delivered OR payment)',
+  blinkit: '(from:blinkit OR from:grofers OR subject:blinkit) (order OR receipt OR invoice OR delivered)',
+  flipkart: '(from:flipkart OR subject:flipkart) (order OR receipt OR invoice OR delivered)',
+  zepto: '(from:zepto OR subject:zepto) (order OR receipt OR invoice OR delivered)',
+  myntra: '(from:myntra OR subject:myntra) (order OR receipt OR invoice OR delivered)',
+  uber: '(from:uber OR subject:uber) (trip OR receipt OR ride OR paid)',
+  bookmyshow: '(from:bookmyshow OR subject:bookmyshow) (ticket OR booking OR receipt OR confirmed)',
+  upi_payment: PAYMENT_APPS_QUERY,
+};
+
 export async function scanGmailOrderReceipts(
   accessToken: string,
   scope: GmailScanScope = 'all',
+  appFilter?: AppId,
 ): Promise<GmailScanResult> {
+  const specificQuery = appFilter ? APP_SPECIFIC_QUERIES[appFilter] : undefined;
   const rawQuery =
-    scope === 'orders'
+    specificQuery ??
+    (scope === 'orders'
       ? ORDER_APPS_QUERY
       : scope === 'payment_apps'
         ? PAYMENT_APPS_QUERY
-        : `(${ORDER_APPS_QUERY}) OR (${PAYMENT_APPS_QUERY})`;
+        : `(${ORDER_APPS_QUERY}) OR (${PAYMENT_APPS_QUERY})`);
 
   const query = encodeURIComponent(rawQuery);
 
@@ -106,9 +131,14 @@ export async function scanGmailOrderReceipts(
 
   if (!listRes.ok) {
     const errText = await listRes.text();
-    throw new Error(
-      `Gmail API error (${listRes.status}): ${errText.slice(0, 180)}`,
-    );
+    const formatted = formatGmailApiError(listRes.status, errText);
+    if (
+      listRes.status === 401 ||
+      (listRes.status === 403 && formatted.includes('permission was not checked'))
+    ) {
+      throw new GmailAuthError(formatted);
+    }
+    throw new Error(formatted);
   }
 
   const listData = (await listRes.json()) as GmailListResponse;
@@ -150,13 +180,13 @@ export async function scanGmailOrderReceipts(
     };
 
     const parsed =
-      scope === 'payment_apps'
+      appFilter === 'upi_payment' || scope === 'payment_apps'
         ? parseOnlinePaymentReceipt(rawMsg)
         : scope === 'orders'
           ? parseGmailReceiptMessage(rawMsg)
           : parseGmailReceiptMessage(rawMsg) ?? parseOnlinePaymentReceipt(rawMsg);
 
-    if (parsed) {
+    if (parsed && (!appFilter || parsed.appId === appFilter)) {
       importedEntries.push(parsed);
     }
   }

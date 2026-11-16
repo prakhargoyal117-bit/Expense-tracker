@@ -32,6 +32,10 @@ const provider = new GoogleAuthProvider();
 for (const scope of WORKSPACE_SCOPES) {
   provider.addScope(scope);
 }
+provider.setCustomParameters({
+  prompt: 'consent select_account',
+  include_granted_scopes: 'true',
+});
 
 // Keep OAuth token strictly in memory (never in localStorage or sessionStorage)
 let cachedGmailAccessToken: string | null = null;
@@ -133,6 +137,10 @@ export async function signInWithGoogleForVaultAndGmail(): Promise<{
 
 export function getInMemoryGmailToken(): string | null {
   return cachedGmailAccessToken;
+}
+
+export function clearInMemoryGmailToken(): void {
+  cachedGmailAccessToken = null;
 }
 
 export async function signOutGoogle(): Promise<void> {

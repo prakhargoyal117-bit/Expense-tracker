@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import {
+  AlertCircle,
   Bell,
   CheckCircle2,
   Cloud,
@@ -35,6 +36,11 @@ import { AppBrandIcon } from './AppBrandIcon';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { PWAInstallButton } from './PWAInstallButton';
 
+interface StatusBanner {
+  type: 'success' | 'error' | 'info';
+  text: string;
+}
+
 interface AppsAndSecurityViewProps {
   apps: ConnectedApp[];
   envelope: EncryptedVaultEnvelope | null;
@@ -43,12 +49,14 @@ interface AppsAndSecurityViewProps {
   googleUser: User | null;
   hasGmailToken: boolean;
   isSyncingGmail: boolean;
-  gmailStatusMessage: string | null;
+  gmailStatus: StatusBanner | null;
+  appSyncStatus: StatusBanner | null;
+  syncingAppId: AppId | null;
   cloudSyncStatus: string | null;
   lastCloudSyncAt: string | null;
   isCloudBusy: boolean;
   onRequestConnectApp: (app: ConnectedApp) => void;
-  onSyncApp: (appId: AppId) => void;
+  onSyncApp: (appId: AppId) => Promise<void>;
   onToggleScope: (appId: AppId, scopeId: string) => void;
   onRevokeApp: (appId: AppId, purgeData: boolean) => void;
   onUpdateBudget: (budget: number) => void;
@@ -57,7 +65,7 @@ interface AppsAndSecurityViewProps {
   onExportEncryptedBackup: () => void;
   onResetDemoVault: () => void;
   onOpenCreateVault: (mode: 'create' | 'import') => void;
-  onGoogleSignIn: () => Promise<void>;
+  onGoogleSignIn: (scanScope?: GmailScanScope) => Promise<void>;
   onGoogleSignOut: () => Promise<void>;
   onScanGmailReceipts: (scope: GmailScanScope) => Promise<void>;
   onImportPaymentReceipts: (rawText: string) => {
@@ -84,7 +92,9 @@ export function AppsAndSecurityView({
   googleUser,
   hasGmailToken,
   isSyncingGmail,
-  gmailStatusMessage,
+  gmailStatus,
+  appSyncStatus,
+  syncingAppId,
   cloudSyncStatus,
   lastCloudSyncAt,
   isCloudBusy,
@@ -125,9 +135,8 @@ export function AppsAndSecurityView({
   const [budgetSaved, setBudgetSaved] = useState(false);
 
   const [revokingAppId, setRevokingAppId] = useState<AppId | null>(null);
-  const [syncNotice, setSyncNotice] = useState<string | null>(null);
   const [csvNotice, setCsvNotice] = useState<string | null>(null);
-  const [gmailScanScope, setGmailScanScope] = useState<GmailScanScope>('payment_apps');
+  const [gmailScanScope, setGmailScanScope] = useState<GmailScanScope>('all');
   const [paymentReceiptInput, setPaymentReceiptInput] = useState('');
   const [paymentReceiptNotice, setPaymentReceiptNotice] = useState<string | null>(null);
 
@@ -184,9 +193,7 @@ export function AppsAndSecurityView({
   };
 
   const handleSync = (app: ConnectedApp) => {
-    onSyncApp(app.id);
-    setSyncNotice(`Synced latest encrypted order insights from ${app.name}.`);
-    setTimeout(() => setSyncNotice(null), 3000);
+    void onSyncApp(app.id);
   };
 
   const handleCsvUpload = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -283,19 +290,24 @@ export function AppsAndSecurityView({
               </div>
             </div>
 
-            {gmailStatusMessage && (
+            {gmailStatus && (
               <p
-                role="status"
-                className="text-xs font-medium text-teal-900 bg-teal-50 border border-teal-200 rounded-lg px-3 py-2"
+                role={gmailStatus.type === 'error' ? 'alert' : 'status'}
+                data-testid="gmail-status-banner"
+                className={`text-xs font-medium rounded-lg px-3 py-2 border ${
+                  gmailStatus.type === 'error'
+                    ? 'text-red-900 bg-red-50 border-red-200'
+                    : 'text-teal-900 bg-teal-50 border-teal-200'
+                }`}
               >
-                {gmailStatusMessage}
+                {gmailStatus.text}
               </p>
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
               {!googleUser || !hasGmailToken ? (
                 <GoogleSignInButton
-                  onClick={() => void onGoogleSignIn()}
+                  onClick={() => void onGoogleSignIn(gmailScanScope)}
                   label={
                     googleUser
                       ? 'Re-authorize Gmail Access'
@@ -476,13 +488,39 @@ export function AppsAndSecurityView({
           </span>
         </div>
 
-        {syncNotice && (
+        {appSyncStatus && (
           <div
-            role="status"
-            className="bg-teal-50 border border-teal-200 text-teal-900 text-xs font-medium px-4 py-2.5 rounded-lg flex items-center gap-2"
+            role={appSyncStatus.type === 'error' ? 'alert' : 'status'}
+            data-testid="app-sync-status-banner"
+            className={`text-xs font-medium px-4 py-2.5 rounded-lg flex flex-wrap items-center justify-between gap-2 border ${
+              appSyncStatus.type === 'error'
+                ? 'bg-red-50 border-red-200 text-red-900'
+                : 'bg-teal-50 border-teal-200 text-teal-900'
+            }`}
           >
-            <CheckCircle2 className="w-4 h-4 text-teal-700 shrink-0" aria-hidden="true" />
-            <span>{syncNotice}</span>
+            <div className="flex items-center gap-2">
+              {appSyncStatus.type === 'error' ? (
+                <AlertCircle
+                  className="w-4 h-4 shrink-0 text-red-700"
+                  aria-hidden="true"
+                />
+              ) : (
+                <CheckCircle2
+                  className="w-4 h-4 shrink-0 text-teal-700"
+                  aria-hidden="true"
+                />
+              )}
+              <span>{appSyncStatus.text}</span>
+            </div>
+            {(!googleUser || !hasGmailToken) && (
+              <button
+                type="button"
+                onClick={() => void onGoogleSignIn(gmailScanScope)}
+                className="px-3 py-1 text-[11px] font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-md transition-colors whitespace-nowrap"
+              >
+                Connect Gmail Now
+              </button>
+            )}
           </div>
         )}
 
@@ -581,10 +619,18 @@ export function AppsAndSecurityView({
                     <button
                       type="button"
                       onClick={() => handleSync(app)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                      disabled={syncingAppId === app.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 rounded-lg transition-colors"
                     >
-                      <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
-                      <span>Sync Latest Orders</span>
+                      <RefreshCw
+                        className={`w-3.5 h-3.5 ${syncingAppId === app.id ? 'animate-spin' : ''}`}
+                        aria-hidden="true"
+                      />
+                      <span>
+                        {syncingAppId === app.id
+                          ? 'Checking Gmail...'
+                          : 'Sync Latest Orders'}
+                      </span>
                     </button>
                     <button
                       type="button"
@@ -796,13 +842,22 @@ export function AppsAndSecurityView({
               </div>
             </div>
 
+            {cloudSyncStatus && (
+              <p
+                role="status"
+                className="text-xs font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2"
+              >
+                {cloudSyncStatus}
+              </p>
+            )}
+
             {!googleUser ? (
               <div className="py-4 space-y-3 border-t border-slate-100">
                 <p className="text-xs text-slate-600">
                   Sign in with your Google account to sync your encrypted vault across devices and restore it anywhere using your passphrase.
                 </p>
                 <GoogleSignInButton
-                  onClick={() => void onGoogleSignIn()}
+                  onClick={() => void onGoogleSignIn(gmailScanScope)}
                   label="Sign in with Google to Sync Vault"
                 />
               </div>
@@ -818,15 +873,6 @@ export function AppsAndSecurityView({
                     </span>
                   )}
                 </div>
-
-                {cloudSyncStatus && (
-                  <p
-                    role="status"
-                    className="text-xs font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2"
-                  >
-                    {cloudSyncStatus}
-                  </p>
-                )}
 
                 <div className="flex flex-wrap items-center gap-2">
                   <button

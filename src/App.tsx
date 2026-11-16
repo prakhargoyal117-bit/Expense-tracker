@@ -12,7 +12,6 @@ import {
   type VaultData,
 } from './types/expense';
 import {
-  APP_SYNC_TEMPLATES,
   CURRENT_MONTH,
   DEFAULT_VAULT_PASSPHRASE,
   INITIAL_APPS,
@@ -35,6 +34,7 @@ import {
   generateExpensesCsv,
   getAvailableMonths,
 } from './utils/analytics';
+import { formatFirebaseAuthError } from './utils/authHelpers';
 import {
   parsePaymentAppReceiptBatch,
   parseStatementCsv,
@@ -48,6 +48,7 @@ import {
   shouldTriggerNightlyReminder,
 } from './utils/reminders';
 import {
+  clearInMemoryGmailToken,
   deleteCloudEncryptedVault,
   fetchCloudEncryptedVault,
   getInMemoryGmailToken,
@@ -58,6 +59,7 @@ import {
   testFirestoreConnection,
 } from './services/firebaseService';
 import {
+  GmailAuthError,
   type GmailScanScope,
   scanGmailOrderReceipts,
 } from './services/gmailService';
@@ -115,9 +117,15 @@ export default function App() {
   const [googleUser, setGoogleUser] = useState<User | null>(null);
   const [hasGmailToken, setHasGmailToken] = useState<boolean>(false);
   const [isSyncingGmail, setIsSyncingGmail] = useState<boolean>(false);
-  const [gmailStatusMessage, setGmailStatusMessage] = useState<string | null>(
-    null,
-  );
+  const [gmailStatus, setGmailStatus] = useState<{
+    type: 'success' | 'error' | 'info';
+    text: string;
+  } | null>(null);
+  const [appSyncStatus, setAppSyncStatus] = useState<{
+    type: 'success' | 'error' | 'info';
+    text: string;
+  } | null>(null);
+  const [syncingAppId, setSyncingAppId] = useState<AppId | null>(null);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<string | null>(null);
   const [lastCloudSyncAt, setLastCloudSyncAt] = useState<string | null>(null);
   const [isCloudBusy, setIsCloudBusy] = useState<boolean>(false);
@@ -309,58 +317,110 @@ export default function App() {
     }));
   };
 
+  const syncAppFromRealGmail = useCallback(
+    async (appId: AppId, appName: string) => {
+      const token = getInMemoryGmailToken();
+      if (!token) {
+        setHasGmailToken(false);
+        setAppSyncStatus({
+          type: 'error',
+          text: `Gmail is not connected yet. Sign in with Google for Gmail above to pull real ${appName} receipts (no sample orders added).`,
+        });
+        return;
+      }
+
+      setSyncingAppId(appId);
+      setAppSyncStatus(null);
+      try {
+        const scanScope: GmailScanScope =
+          appId === 'upi_payment' ? 'payment_apps' : 'orders';
+        const result = await scanGmailOrderReceipts(token, scanScope, appId);
+        const nowIso = new Date().toISOString();
+        let addedCount = 0;
+
+        updateVault((prev) => {
+          const existingIds = new Set(prev.expenses.map((e) => e.id));
+          const freshEntries = result.importedEntries.filter(
+            (e) => !existingIds.has(e.id),
+          );
+          addedCount = freshEntries.length;
+
+          return {
+            ...prev,
+            apps: prev.apps.map((a) =>
+              a.id === appId ? { ...a, lastSyncedAt: nowIso } : a,
+            ),
+            expenses: [...freshEntries, ...prev.expenses],
+          };
+        });
+
+        setAppSyncStatus({
+          type: addedCount > 0 ? 'success' : 'info',
+          text:
+            addedCount > 0
+              ? `Synced ${addedCount} real ${appName} receipt(s) from ${result.scannedCount} Gmail message(s).`
+              : `Checked ${result.scannedCount} Gmail message(s) for ${appName} · No new order receipts found.`,
+        });
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : `Unable to sync ${appName} receipts from Gmail.`;
+        if (err instanceof GmailAuthError) {
+          clearInMemoryGmailToken();
+          setHasGmailToken(false);
+          setGmailStatus({ type: 'error', text: message });
+        }
+        setAppSyncStatus({ type: 'error', text: message });
+      } finally {
+        setSyncingAppId(null);
+      }
+    },
+    [updateVault],
+  );
+
   const handleApproveApp = (
     app: ConnectedApp,
     accountHandle: string,
     grantedScopeIds: string[],
   ) => {
     const nowIso = new Date().toISOString();
-    const templates = APP_SYNC_TEMPLATES[app.id] ?? [];
+    const token = getInMemoryGmailToken();
 
-    updateVault((prev) => {
-      const existingIds = new Set(prev.expenses.map((e) => e.id));
-      const newSynced = templates.filter((t) => !existingIds.has(t.id));
-
-      return {
-        ...prev,
-        apps: prev.apps.map((a) =>
-          a.id === app.id
-            ? {
-                ...a,
-                isConnected: true,
-                connectedAt: nowIso,
-                lastSyncedAt: nowIso,
-                accountHandle,
-                scopes: a.scopes.map((s) => ({
-                  ...s,
-                  granted: grantedScopeIds.includes(s.id),
-                })),
-              }
-            : a,
-        ),
-        expenses: [...newSynced, ...prev.expenses],
-      };
-    });
+    updateVault((prev) => ({
+      ...prev,
+      apps: prev.apps.map((a) =>
+        a.id === app.id
+          ? {
+              ...a,
+              isConnected: true,
+              connectedAt: nowIso,
+              lastSyncedAt: token ? nowIso : null,
+              accountHandle,
+              scopes: a.scopes.map((s) => ({
+                ...s,
+                granted: grantedScopeIds.includes(s.id),
+              })),
+            }
+          : a,
+      ),
+    }));
 
     setPendingConsentApp(null);
+
+    if (token) {
+      void syncAppFromRealGmail(app.id, app.name);
+    } else {
+      setAppSyncStatus({
+        type: 'info',
+        text: `${app.name} connected. No sample orders were added—sign in with Google for Gmail above or import CSV/receipts to pull your real ${app.name} orders.`,
+      });
+    }
   };
 
-  const handleSyncApp = (appId: AppId) => {
-    const nowIso = new Date().toISOString();
-    const templates = APP_SYNC_TEMPLATES[appId] ?? [];
-
-    updateVault((prev) => {
-      const existingIds = new Set(prev.expenses.map((e) => e.id));
-      const freshEntries = templates.filter((t) => !existingIds.has(t.id));
-
-      return {
-        ...prev,
-        apps: prev.apps.map((a) =>
-          a.id === appId ? { ...a, lastSyncedAt: nowIso } : a,
-        ),
-        expenses: [...freshEntries, ...prev.expenses],
-      };
-    });
+  const handleSyncApp = async (appId: AppId) => {
+    const targetApp = vault?.apps.find((a) => a.id === appId);
+    await syncAppFromRealGmail(appId, targetApp?.name ?? appId);
   };
 
   const handleToggleScope = (appId: AppId, scopeId: string) => {
@@ -542,57 +602,40 @@ export default function App() {
     }
   };
 
-  // Google Sign-In for Gmail + Cloud Vault Sync
-  const handleGoogleSignIn = async () => {
-    setGmailStatusMessage(null);
-    setCloudSyncStatus(null);
-    try {
-      const { user, accessToken } = await signInWithGoogleForVaultAndGmail();
-      setGoogleUser(user);
-      setHasGmailToken(Boolean(accessToken));
-      if (accessToken) {
-        setGmailStatusMessage(
-          `Connected ${user.email}. Click "Scan Gmail for Order Receipts" to import orders.`,
-        );
-      }
-    } catch (err) {
-      setCloudSyncStatus(
-        err instanceof Error
-          ? `Google Sign-In failed: ${err.message}`
-          : 'Google Sign-In failed.',
-      );
-    }
-  };
-
-  const handleGoogleSignOut = async () => {
-    await signOutGoogle();
-    setGoogleUser(null);
-    setHasGmailToken(false);
-    setGmailStatusMessage(null);
-    setCloudSyncStatus(null);
-  };
-
   // Scan Gmail order or payment-app receipts using in-memory OAuth token
-  const handleScanGmailReceipts = async (scope: GmailScanScope = 'all') => {
+  const handleScanGmailReceipts = async (
+    scope: GmailScanScope = 'all',
+    connectedEmailOverride?: string | null,
+  ) => {
     const token = getInMemoryGmailToken();
     if (!token) {
       setHasGmailToken(false);
-      setGmailStatusMessage(
-        'Gmail session expired. Click Re-authorize Gmail Access to refresh.',
-      );
+      setGmailStatus({
+        type: 'error',
+        text: 'Gmail session not authorized yet. Click "Re-authorize Gmail Access" and check the Gmail read-only permission box.',
+      });
       return;
     }
 
     setIsSyncingGmail(true);
-    setGmailStatusMessage(null);
+    const activeEmail = connectedEmailOverride ?? googleUser?.email;
+    setGmailStatus({
+      type: 'info',
+      text: activeEmail
+        ? `Connected ${activeEmail} · Scanning Gmail for receipts...`
+        : 'Scanning Gmail for receipts...',
+    });
+
     try {
       const result = await scanGmailOrderReceipts(token, scope);
       if (result.importedEntries.length === 0) {
-        setGmailStatusMessage(
-          scope === 'payment_apps'
-            ? `Scanned ${result.scannedCount} recent emails · No new online payment app receipts found (OTPs, promos, and credits were ignored).`
-            : `Scanned ${result.scannedCount} recent emails · No new EatSure, Zomato, Swiggy, Amazon, or UPI receipts found.`,
-        );
+        setGmailStatus({
+          type: 'info',
+          text:
+            scope === 'payment_apps'
+              ? `Connected${activeEmail ? ` (${activeEmail})` : ''} · Scanned ${result.scannedCount} recent email(s) · No new online payment app receipts found (OTPs, promos, and credits ignored).`
+              : `Connected${activeEmail ? ` (${activeEmail})` : ''} · Scanned ${result.scannedCount} recent email(s) · No new EatSure, Zomato, Swiggy, Amazon, or UPI receipts found.`,
+        });
         return;
       }
 
@@ -617,7 +660,8 @@ export default function App() {
                   isConnected: true,
                   connectedAt: app.connectedAt ?? nowIso,
                   lastSyncedAt: nowIso,
-                  accountHandle: googleUser?.email ?? app.accountHandle ?? 'Gmail Sync',
+                  accountHandle:
+                    activeEmail ?? app.accountHandle ?? 'Gmail Sync',
                   scopes: app.scopes.map((s) => ({ ...s, granted: true })),
                 }
               : app,
@@ -625,18 +669,67 @@ export default function App() {
         };
       });
 
-      setGmailStatusMessage(
-        `Scanned ${result.scannedCount} emails · Imported ${addedCount} new receipt(s) into your encrypted vault.`,
-      );
+      setGmailStatus({
+        type: addedCount > 0 ? 'success' : 'info',
+        text:
+          addedCount > 0
+            ? `Connected${activeEmail ? ` (${activeEmail})` : ''} · Scanned ${result.scannedCount} emails · Imported ${addedCount} real receipt(s) into your encrypted vault.`
+            : `Connected${activeEmail ? ` (${activeEmail})` : ''} · Scanned ${result.scannedCount} emails · All matching receipts are already in your vault.`,
+      });
     } catch (err) {
-      setGmailStatusMessage(
+      const message =
         err instanceof Error
-          ? `Gmail scan failed: ${err.message}`
-          : 'Unable to scan Gmail receipts.',
-      );
+          ? err.message
+          : 'Unable to scan Gmail receipts.';
+      if (err instanceof GmailAuthError) {
+        clearInMemoryGmailToken();
+        setHasGmailToken(false);
+      }
+      setGmailStatus({
+        type: 'error',
+        text: message.startsWith('Gmail') ? message : `Gmail scan failed: ${message}`,
+      });
     } finally {
       setIsSyncingGmail(false);
     }
+  };
+
+  // Google Sign-In for Gmail + Cloud Vault Sync
+  const handleGoogleSignIn = async (scanScope: GmailScanScope = 'all') => {
+    setGmailStatus(null);
+    setCloudSyncStatus(null);
+    setAppSyncStatus(null);
+    try {
+      const { user, accessToken } = await signInWithGoogleForVaultAndGmail();
+      setGoogleUser(user);
+      setHasGmailToken(Boolean(accessToken));
+
+      if (accessToken) {
+        setCloudSyncStatus(
+          `Signed in as ${user.email}. Cloud encrypted vault sync is ready.`,
+        );
+        await handleScanGmailReceipts(scanScope, user.email);
+      } else {
+        const missingMsg = `Signed in as ${user.email}, but Gmail read-only permission was not granted in the Google consent popup. Click "Re-authorize Gmail Access" and check the Gmail access box.`;
+        setGmailStatus({ type: 'error', text: missingMsg });
+        setCloudSyncStatus(missingMsg);
+      }
+    } catch (err) {
+      const host =
+        typeof window !== 'undefined' ? window.location.hostname : undefined;
+      const msg = formatFirebaseAuthError(err, host);
+      setGmailStatus({ type: 'error', text: msg });
+      setCloudSyncStatus(msg);
+    }
+  };
+
+  const handleGoogleSignOut = async () => {
+    await signOutGoogle();
+    setGoogleUser(null);
+    setHasGmailToken(false);
+    setGmailStatus(null);
+    setAppSyncStatus(null);
+    setCloudSyncStatus(null);
   };
 
   // Parse pasted payment receipts from any online payment app (GPay, PhonePe, Paytm, BHIM, CRED, UPI)
@@ -1189,7 +1282,9 @@ export default function App() {
               googleUser={googleUser}
               hasGmailToken={hasGmailToken}
               isSyncingGmail={isSyncingGmail}
-              gmailStatusMessage={gmailStatusMessage}
+              gmailStatus={gmailStatus}
+              appSyncStatus={appSyncStatus}
+              syncingAppId={syncingAppId}
               cloudSyncStatus={cloudSyncStatus}
               lastCloudSyncAt={lastCloudSyncAt}
               isCloudBusy={isCloudBusy}
@@ -1241,6 +1336,7 @@ export default function App() {
 
       <PermissionConsentModal
         app={pendingConsentApp}
+        defaultAccountHandle={googleUser?.email ?? ''}
         onClose={() => setPendingConsentApp(null)}
         onApprove={handleApproveApp}
       />

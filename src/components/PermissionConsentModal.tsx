@@ -5,16 +5,18 @@ import { AppBrandIcon } from './AppBrandIcon';
 
 interface PermissionConsentModalProps {
   app: ConnectedApp | null;
+  defaultAccountHandle?: string;
   onClose: () => void;
   onApprove: (app: ConnectedApp, accountHandle: string, grantedScopeIds: string[]) => void;
 }
 
 export function PermissionConsentModal({
   app,
+  defaultAccountHandle = '',
   onClose,
   onApprove,
 }: PermissionConsentModalProps) {
-  const [accountHandle, setAccountHandle] = useState('aarav.sharma@campus.edu');
+  const [accountHandle, setAccountHandle] = useState(defaultAccountHandle);
   const [checkedScopes, setCheckedScopes] = useState<Record<string, boolean>>({
     read_orders: false,
     payment_mode: false,
@@ -23,13 +25,14 @@ export function PermissionConsentModal({
   const [consentError, setConsentError] = useState<string | null>(null);
 
   useEffect(() => {
+    setAccountHandle(defaultAccountHandle);
     setCheckedScopes({
       read_orders: false,
       payment_mode: false,
       daily_digest: true,
     });
     setConsentError(null);
-  }, [app?.id]);
+  }, [app?.id, defaultAccountHandle]);
 
   if (!app) return null;
 
@@ -84,7 +87,7 @@ export function PermissionConsentModal({
                 Authorize {app.name} Account Access
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                {app.category} · Read-only expenditure sync
+                {app.category} · Real receipt-only sync (no demo orders added)
               </p>
             </div>
           </div>
@@ -114,6 +117,7 @@ export function PermissionConsentModal({
                 setAccountHandle(e.target.value);
                 setConsentError(null);
               }}
+              placeholder="e.g., your.email@gmail.com or phone number"
               className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700"
             />
           </div>
@@ -149,7 +153,7 @@ export function PermissionConsentModal({
           <div className="flex items-start gap-2.5 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600">
             <Lock className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" aria-hidden="true" />
             <p>
-              <strong>End-to-End Privacy:</strong> Order totals and payment modes are encrypted locally with AES-256-GCM. You can revoke access and purge {app.name} history at any time.
+              <strong>Real Receipts Only &amp; E2EE:</strong> Only real {app.name} order receipts found in your connected Gmail (read-only), CSV uploads, or payment receipt reader are added—never sample orders. Everything is encrypted locally with AES-256-GCM.
             </p>
           </div>
 
