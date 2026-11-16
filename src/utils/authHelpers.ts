@@ -1,9 +1,20 @@
+export const GOOGLE_SIGNIN_STALL_MS = 2500;
+export const GOOGLE_SIGNIN_TIMEOUT_MS = 35000;
+
 export function detectInAppBrowserHint(userAgent?: string): string | null {
   if (!userAgent) return null;
   if (/(FBAN|FBAV|Instagram|WhatsApp|Telegram|Line\/|MicroMessenger|\bwv\b)/i.test(userAgent)) {
     return 'In-app browsers (WhatsApp, Instagram, Telegram) block Google login popups. Tap the menu (⋮) and choose "Open in Chrome" or "Open in Safari".';
   }
   return null;
+}
+
+export function getStallSignInNotice(userAgent?: string): string {
+  const inAppHint = detectInAppBrowserHint(userAgent);
+  if (inAppHint) {
+    return `${inAppHint} Or tap "Try Full-Page Redirect Sign-In Instead" below.`;
+  }
+  return 'Still waiting for Google Sign-In window... If no popup appeared (common on mobile Chrome or installed PWAs), tap "Try Full-Page Redirect Sign-In Instead" or "Cancel" below.';
 }
 
 export function shouldOfferRedirectFallback(error: unknown): boolean {

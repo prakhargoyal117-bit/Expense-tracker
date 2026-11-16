@@ -1,9 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  GOOGLE_SIGNIN_STALL_MS,
+  GOOGLE_SIGNIN_TIMEOUT_MS,
   detectInAppBrowserHint,
   formatFirebaseAuthError,
   formatGmailApiError,
+  getStallSignInNotice,
   shouldOfferRedirectFallback,
 } from './authHelpers';
 
@@ -56,6 +59,17 @@ test('shouldOfferRedirectFallback and detectInAppBrowserHint detect mobile webvi
     detectInAppBrowserHint('Mozilla/5.0 Chrome/120.0.0.0 Safari/537.36'),
     null,
   );
+});
+
+test('Google sign-in stall and timeout guidance prevents indefinite popup waits', () => {
+  assert.ok(GOOGLE_SIGNIN_STALL_MS > 0 && GOOGLE_SIGNIN_STALL_MS <= 5000);
+  assert.ok(GOOGLE_SIGNIN_TIMEOUT_MS > GOOGLE_SIGNIN_STALL_MS);
+  const desktopStall = getStallSignInNotice('Mozilla/5.0 Chrome/120.0');
+  assert.ok(desktopStall.includes('Try Full-Page Redirect Sign-In Instead'));
+  assert.ok(desktopStall.includes('Cancel'));
+
+  const inAppStall = getStallSignInNotice('Mozilla/5.0 [FBAN/EMA;Instagram]');
+  assert.ok(inAppStall.includes('Open in Chrome'));
 });
 
 test('formatGmailApiError surfaces expired tokens and missing Gmail scopes clearly', () => {

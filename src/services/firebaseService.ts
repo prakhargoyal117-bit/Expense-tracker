@@ -150,12 +150,18 @@ export async function signInWithGoogleForVaultAndGmail(): Promise<{
   return activeSignInPromise;
 }
 
+export function resetPendingGoogleSignIn(): void {
+  isSigningIn = false;
+  activeSignInPromise = null;
+}
+
 export async function signInWithGoogleRedirectFallback(): Promise<void> {
   if (typeof window !== 'undefined' && window.self !== window.top) {
     throw new Error(
       'Redirect sign-in cannot run inside an embedded preview frame. Allow popups or open the standalone app URL in a browser tab.',
     );
   }
+  resetPendingGoogleSignIn();
   await signInWithRedirect(auth, provider);
 }
 

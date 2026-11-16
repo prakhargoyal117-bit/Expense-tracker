@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { Bell, Lock, Menu, Plus, PlusCircle, ShieldCheck } from 'lucide-react';
 import {
@@ -35,7 +35,10 @@ import {
   getAvailableMonths,
 } from './utils/analytics';
 import {
+  GOOGLE_SIGNIN_STALL_MS,
+  GOOGLE_SIGNIN_TIMEOUT_MS,
   formatFirebaseAuthError,
+  getStallSignInNotice,
   shouldOfferRedirectFallback,
 } from './utils/authHelpers';
 import {
@@ -57,6 +60,7 @@ import {
   fetchCloudEncryptedVault,
   getInMemoryGmailToken,
   initFirebaseAuth,
+  resetPendingGoogleSignIn,
   saveCloudEncryptedVault,
   signInWithGoogleForVaultAndGmail,
   signInWithGoogleRedirectFallback,
@@ -122,9 +126,26 @@ export default function App() {
   const [googleUser, setGoogleUser] = useState<User | null>(null);
   const [hasGmailToken, setHasGmailToken] = useState<boolean>(false);
   const [isSigningInGoogle, setIsSigningInGoogle] = useState<boolean>(false);
+  const [isRedirectingGoogle, setIsRedirectingGoogle] = useState<boolean>(false);
   const [showRedirectFallback, setShowRedirectFallback] = useState<boolean>(false);
   const [pendingRedirectScan, setPendingRedirectScan] = useState<boolean>(false);
   const [isSyncingGmail, setIsSyncingGmail] = useState<boolean>(false);
+  const signInAttemptIdRef = useRef<number>(0);
+  const signInStallTimerRef = useRef<number | null>(null);
+  const signInTimeoutTimerRef = useRef<number | null>(null);
+
+  const clearSignInTimers = useCallback(() => {
+    if (signInStallTimerRef.current !== null) {
+      window.clearTimeout(signInStallTimerRef.current);
+      signInStallTimerRef.current = null;
+    }
+    if (signInTimeoutTimerRef.current !== null) {
+      window.clearTimeout(signInTimeoutTimerRef.current);
+      signInTimeoutTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearSignInTimers, [clearSignInTimers]);
   const [gmailStatus, setGmailStatus] = useState<{
     type: 'success' | 'error' | 'info';
     text: string;
@@ -734,7 +755,10 @@ export default function App() {
 
   // Google Sign-In for Gmail + Cloud Vault Sync
   const handleGoogleSignIn = async (scanScope: GmailScanScope = 'all') => {
-    if (isSigningInGoogle) return;
+    if (isSigningInGoogle || isRedirectingGoogle) return;
+    clearSignInTimers();
+    const attemptId = ++signInAttemptIdRef.current;
+
     setIsSigningInGoogle(true);
     setShowRedirectFallback(false);
     setGmailStatus({
@@ -743,10 +767,39 @@ export default function App() {
     });
     setCloudSyncStatus(null);
     setAppSyncStatus(null);
+
+    const ua =
+      typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
+
+    signInStallTimerRef.current = window.setTimeout(() => {
+      if (signInAttemptIdRef.current !== attemptId) return;
+      setShowRedirectFallback(true);
+      setGmailStatus({
+        type: 'info',
+        text: getStallSignInNotice(ua),
+      });
+    }, GOOGLE_SIGNIN_STALL_MS);
+
+    signInTimeoutTimerRef.current = window.setTimeout(() => {
+      if (signInAttemptIdRef.current !== attemptId) return;
+      signInAttemptIdRef.current += 1;
+      clearSignInTimers();
+      resetPendingGoogleSignIn();
+      setIsSigningInGoogle(false);
+      setShowRedirectFallback(true);
+      const timeoutMsg =
+        'Google Sign-In window timed out without responding. Tap "Try Full-Page Redirect Sign-In Instead" below, or allow popups for this site and try again.';
+      setGmailStatus({ type: 'error', text: timeoutMsg });
+      setCloudSyncStatus(timeoutMsg);
+    }, GOOGLE_SIGNIN_TIMEOUT_MS);
+
     try {
       const { user, accessToken } = await signInWithGoogleForVaultAndGmail();
+      if (signInAttemptIdRef.current !== attemptId) return;
+      clearSignInTimers();
       setGoogleUser(user);
       setHasGmailToken(Boolean(accessToken));
+      setShowRedirectFallback(false);
 
       if (accessToken) {
         setCloudSyncStatus(
@@ -759,22 +812,42 @@ export default function App() {
         setCloudSyncStatus(missingMsg);
       }
     } catch (err) {
+      if (signInAttemptIdRef.current !== attemptId) return;
+      clearSignInTimers();
       const host =
         typeof window !== 'undefined' ? window.location.hostname : undefined;
-      const ua =
-        typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
       const msg = formatFirebaseAuthError(err, host, ua);
       setShowRedirectFallback(shouldOfferRedirectFallback(err));
       setGmailStatus({ type: 'error', text: msg });
       setCloudSyncStatus(msg);
     } finally {
-      setIsSigningInGoogle(false);
+      if (signInAttemptIdRef.current === attemptId) {
+        clearSignInTimers();
+        setIsSigningInGoogle(false);
+      }
     }
   };
 
+  const handleCancelGoogleSignIn = useCallback(() => {
+    signInAttemptIdRef.current += 1;
+    clearSignInTimers();
+    resetPendingGoogleSignIn();
+    setIsSigningInGoogle(false);
+    setIsRedirectingGoogle(false);
+    setShowRedirectFallback(true);
+    setGmailStatus({
+      type: 'info',
+      text: 'Google Sign-In canceled. You can retry the popup or use "Try Full-Page Redirect Sign-In Instead" below.',
+    });
+  }, [clearSignInTimers]);
+
   const handleGoogleRedirectSignIn = async () => {
-    if (isSigningInGoogle) return;
-    setIsSigningInGoogle(true);
+    if (isRedirectingGoogle) return;
+    signInAttemptIdRef.current += 1;
+    clearSignInTimers();
+    resetPendingGoogleSignIn();
+    setIsSigningInGoogle(false);
+    setIsRedirectingGoogle(true);
     setGmailStatus({
       type: 'info',
       text: 'Redirecting to Google Sign-In...',
@@ -789,7 +862,7 @@ export default function App() {
       const msg = formatFirebaseAuthError(err, host, ua);
       setGmailStatus({ type: 'error', text: msg });
       setCloudSyncStatus(msg);
-      setIsSigningInGoogle(false);
+      setIsRedirectingGoogle(false);
     }
   };
 
@@ -1360,6 +1433,7 @@ export default function App() {
               googleUser={googleUser}
               hasGmailToken={hasGmailToken}
               isSigningInGoogle={isSigningInGoogle}
+              isRedirectingGoogle={isRedirectingGoogle}
               showRedirectFallback={showRedirectFallback}
               isSyncingGmail={isSyncingGmail}
               gmailStatus={gmailStatus}
@@ -1382,6 +1456,7 @@ export default function App() {
               }
               onGoogleSignIn={handleGoogleSignIn}
               onGoogleRedirectSignIn={handleGoogleRedirectSignIn}
+              onCancelGoogleSignIn={handleCancelGoogleSignIn}
               onGoogleSignOut={handleGoogleSignOut}
               onScanGmailReceipts={handleScanGmailReceipts}
               onImportPaymentReceipts={handleImportPaymentReceipts}

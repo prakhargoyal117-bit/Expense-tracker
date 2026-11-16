@@ -49,6 +49,7 @@ interface AppsAndSecurityViewProps {
   googleUser: User | null;
   hasGmailToken: boolean;
   isSigningInGoogle: boolean;
+  isRedirectingGoogle: boolean;
   showRedirectFallback: boolean;
   isSyncingGmail: boolean;
   gmailStatus: StatusBanner | null;
@@ -69,6 +70,7 @@ interface AppsAndSecurityViewProps {
   onOpenCreateVault: (mode: 'create' | 'import') => void;
   onGoogleSignIn: (scanScope?: GmailScanScope) => Promise<void>;
   onGoogleRedirectSignIn: () => Promise<void>;
+  onCancelGoogleSignIn: () => void;
   onGoogleSignOut: () => Promise<void>;
   onScanGmailReceipts: (scope: GmailScanScope) => Promise<void>;
   onImportPaymentReceipts: (rawText: string) => {
@@ -95,6 +97,7 @@ export function AppsAndSecurityView({
   googleUser,
   hasGmailToken,
   isSigningInGoogle,
+  isRedirectingGoogle,
   showRedirectFallback,
   isSyncingGmail,
   gmailStatus,
@@ -115,6 +118,7 @@ export function AppsAndSecurityView({
   onOpenCreateVault,
   onGoogleSignIn,
   onGoogleRedirectSignIn,
+  onCancelGoogleSignIn,
   onGoogleSignOut,
   onScanGmailReceipts,
   onImportPaymentReceipts,
@@ -307,32 +311,60 @@ export function AppsAndSecurityView({
                 }`}
               >
                 <p>{gmailStatus.text}</p>
-                {showRedirectFallback && gmailStatus.type === 'error' && (
-                  <button
-                    type="button"
-                    disabled={isSigningInGoogle}
-                    onClick={() => void onGoogleRedirectSignIn()}
-                    className="inline-flex items-center px-3 py-1.5 text-[11px] font-semibold text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-50 rounded-md transition-colors"
-                  >
-                    Try Full-Page Redirect Sign-In Instead
-                  </button>
+                {(showRedirectFallback || isSigningInGoogle) && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {showRedirectFallback && (
+                      <button
+                        type="button"
+                        disabled={isRedirectingGoogle}
+                        onClick={() => void onGoogleRedirectSignIn()}
+                        className="inline-flex items-center px-3 py-1.5 text-[11px] font-semibold text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-50 rounded-md transition-colors"
+                      >
+                        {isRedirectingGoogle
+                          ? 'Redirecting to Google...'
+                          : 'Try Full-Page Redirect Sign-In Instead'}
+                      </button>
+                    )}
+                    {isSigningInGoogle && (
+                      <button
+                        type="button"
+                        onClick={onCancelGoogleSignIn}
+                        className="inline-flex items-center px-3 py-1.5 text-[11px] font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-md transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
               {!googleUser || !hasGmailToken ? (
-                <GoogleSignInButton
-                  disabled={isSigningInGoogle}
-                  onClick={() => void onGoogleSignIn(gmailScanScope)}
-                  label={
-                    isSigningInGoogle
-                      ? 'Waiting for Google Sign-In...'
-                      : googleUser
-                        ? 'Re-authorize Gmail Access'
-                        : 'Sign in with Google for Gmail'
-                  }
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <GoogleSignInButton
+                    disabled={isSigningInGoogle || isRedirectingGoogle}
+                    onClick={() => void onGoogleSignIn(gmailScanScope)}
+                    label={
+                      isRedirectingGoogle
+                        ? 'Redirecting to Google...'
+                        : isSigningInGoogle
+                          ? 'Waiting for Google Sign-In...'
+                          : googleUser
+                            ? 'Re-authorize Gmail Access'
+                            : 'Sign in with Google for Gmail'
+                    }
+                  />
+                  {isSigningInGoogle && (
+                    <button
+                      type="button"
+                      onClick={onCancelGoogleSignIn}
+                      className="px-3 py-2 text-xs font-medium text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
               ) : (
                 <button
                   type="button"
@@ -532,14 +564,39 @@ export function AppsAndSecurityView({
               <span>{appSyncStatus.text}</span>
             </div>
             {(!googleUser || !hasGmailToken) && (
-              <button
-                type="button"
-                disabled={isSigningInGoogle}
-                onClick={() => void onGoogleSignIn(gmailScanScope)}
-                className="px-3 py-1 text-[11px] font-semibold text-white bg-teal-700 hover:bg-teal-800 disabled:opacity-50 rounded-md transition-colors whitespace-nowrap"
-              >
-                {isSigningInGoogle ? 'Opening Google...' : 'Connect Gmail Now'}
-              </button>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  disabled={isSigningInGoogle || isRedirectingGoogle}
+                  onClick={() => void onGoogleSignIn(gmailScanScope)}
+                  className="px-3 py-1 text-[11px] font-semibold text-white bg-teal-700 hover:bg-teal-800 disabled:opacity-50 rounded-md transition-colors whitespace-nowrap"
+                >
+                  {isRedirectingGoogle
+                    ? 'Redirecting...'
+                    : isSigningInGoogle
+                      ? 'Opening Google...'
+                      : 'Connect Gmail Now'}
+                </button>
+                {showRedirectFallback && (
+                  <button
+                    type="button"
+                    disabled={isRedirectingGoogle}
+                    onClick={() => void onGoogleRedirectSignIn()}
+                    className="px-2.5 py-1 text-[11px] font-semibold text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-50 rounded-md transition-colors whitespace-nowrap"
+                  >
+                    Try Redirect Sign-In
+                  </button>
+                )}
+                {isSigningInGoogle && (
+                  <button
+                    type="button"
+                    onClick={onCancelGoogleSignIn}
+                    className="px-2.5 py-1 text-[11px] font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-md transition-colors whitespace-nowrap"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -878,22 +935,35 @@ export function AppsAndSecurityView({
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <GoogleSignInButton
-                    disabled={isSigningInGoogle}
+                    disabled={isSigningInGoogle || isRedirectingGoogle}
                     onClick={() => void onGoogleSignIn(gmailScanScope)}
                     label={
-                      isSigningInGoogle
-                        ? 'Waiting for Google Sign-In...'
-                        : 'Sign in with Google to Sync Vault'
+                      isRedirectingGoogle
+                        ? 'Redirecting to Google...'
+                        : isSigningInGoogle
+                          ? 'Waiting for Google Sign-In...'
+                          : 'Sign in with Google to Sync Vault'
                     }
                   />
                   {showRedirectFallback && (
                     <button
                       type="button"
-                      disabled={isSigningInGoogle}
+                      disabled={isRedirectingGoogle}
                       onClick={() => void onGoogleRedirectSignIn()}
                       className="px-3 py-2 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-50 rounded-lg transition-colors"
                     >
-                      Try Redirect Sign-In
+                      {isRedirectingGoogle
+                        ? 'Redirecting...'
+                        : 'Try Redirect Sign-In'}
+                    </button>
+                  )}
+                  {isSigningInGoogle && (
+                    <button
+                      type="button"
+                      onClick={onCancelGoogleSignIn}
+                      className="px-3 py-2 text-xs font-medium text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors"
+                    >
+                      Cancel
                     </button>
                   )}
                 </div>
