@@ -4,6 +4,8 @@ import {
   detectPaymentMode,
   extractAmountINR,
   parseGmailReceiptMessage,
+  parseOnlinePaymentReceipt,
+  parsePaymentAppReceiptBatch,
   parseStatementCsv,
 } from './gmailParser';
 import { ExpenseCategory, PaymentMode } from '../types/expense';
@@ -22,7 +24,7 @@ test('detectPaymentMode distinguishes Cash on Delivery vs Online UPI', () => {
   assert.equal(detectPaymentMode('Paid via Google Pay UPI'), PaymentMode.ONLINE);
 });
 
-test('parseGmailReceiptMessage parses Zomato, Amazon, and rejects promotional emails', () => {
+test('parseGmailReceiptMessage parses Zomato, EatSure, Amazon, and rejects promotional emails', () => {
   const zomato = parseGmailReceiptMessage({
     id: 'msg123',
     internalDate: String(new Date('2026-11-15T14:20:00Z').getTime()),
@@ -39,6 +41,21 @@ test('parseGmailReceiptMessage parses Zomato, Amazon, and rejects promotional em
   assert.equal(zomato.category, ExpenseCategory.FOOD);
   assert.equal(zomato.amount, 415);
   assert.equal(zomato.mode, PaymentMode.ONLINE);
+
+  const eatsure = parseGmailReceiptMessage({
+    id: 'msg789',
+    internalDate: String(new Date('2026-11-14T19:30:00Z').getTime()),
+    headers: {
+      from: 'EatSure <orders@eatsure.com>',
+      subject: 'Your EatSure order #ES-9021 is confirmed',
+    },
+    snippet: 'Order Total: ₹395.00 paid via UPI',
+  });
+
+  assert.ok(eatsure);
+  assert.equal(eatsure.appId, 'eatsure');
+  assert.equal(eatsure.category, ExpenseCategory.FOOD);
+  assert.equal(eatsure.amount, 395);
 
   const amazonCod = parseGmailReceiptMessage({
     id: 'msg456',
@@ -64,6 +81,47 @@ test('parseGmailReceiptMessage parses Zomato, Amazon, and rejects promotional em
     snippet: 'Use code HUNGRY today for ₹150 discount.',
   });
   assert.equal(promo, null);
+});
+
+test('parseOnlinePaymentReceipt reads only outgoing online payment app receipts and ignores OTPs, promos, and credits', () => {
+  const phonepe = parseOnlinePaymentReceipt({
+    id: 'pp1',
+    headers: {},
+    bodyText: 'PhonePe: Paid ₹240.00 to North Gate Xerox via UPI Ref 43298122',
+  });
+  assert.ok(phonepe);
+  assert.equal(phonepe.appId, 'upi_payment');
+  assert.equal(phonepe.amount, 240);
+  assert.equal(phonepe.category, ExpenseCategory.ACADEMICS);
+  assert.ok(phonepe.merchant.includes('North Gate Xerox'));
+  assert.ok(phonepe.notes?.includes('PhonePe'));
+
+  const amazonPay = parseOnlinePaymentReceipt({
+    id: 'ap1',
+    headers: {},
+    bodyText: 'Amazon Pay: Payment successful of ₹180 to Metro Smart Card via UPI Ref 99887766',
+  });
+  assert.ok(amazonPay);
+  assert.equal(amazonPay.appId, 'upi_payment');
+  assert.equal(amazonPay.amount, 180);
+
+  const batch = parsePaymentAppReceiptBatch(
+    [
+      'PhonePe: Paid ₹240.00 to North Gate Xerox via UPI Ref 43298122',
+      'You paid ₹150 to Sharma Tea Stall using Google Pay',
+      'Your OTP is 482910 for Paytm login. Do not share this code.',
+      'Win upto ₹500 cashback on PhonePe scratch card! Claim your reward.',
+      '₹500.00 credited to your account from Rahul via Google Pay',
+    ].join('\n'),
+    '2026-11-15',
+  );
+
+  assert.equal(batch.totalScanned, 5);
+  assert.equal(batch.receipts.length, 2);
+  assert.equal(batch.ignoredCount, 3);
+  assert.equal(batch.receipts[0].amount, 240);
+  assert.equal(batch.receipts[1].amount, 150);
+  assert.equal(batch.receipts[1].category, ExpenseCategory.FOOD);
 });
 
 test('parseStatementCsv imports rows with app matching and payment mode detection', () => {

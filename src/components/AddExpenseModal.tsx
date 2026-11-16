@@ -50,7 +50,7 @@ export function AddExpenseModal({
 
   if (!isOpen) return null;
 
-  const connectedApps = apps.filter((a) => a.isConnected);
+  const sortedApps = [...apps].sort((a, b) => Number(b.isConnected) - Number(a.isConnected));
 
   const applySplit = (billVal: number, countVal: number) => {
     if (!Number.isFinite(billVal) || billVal <= 0) return;
@@ -243,7 +243,7 @@ export function AddExpenseModal({
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700"
               >
                 <option value="manual">Manual / Direct Shop</option>
-                {connectedApps.map((app) => (
+                {sortedApps.map((app) => (
                   <option key={app.id} value={app.id}>
                     {app.name}
                   </option>

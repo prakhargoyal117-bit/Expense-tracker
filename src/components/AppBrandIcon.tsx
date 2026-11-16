@@ -8,6 +8,7 @@ interface AppBrandIconProps {
 const APP_BADGE_MAP: Record<AppId, { short: string; bg: string; fg: string }> = {
   zomato: { short: 'Z', bg: '#E23744', fg: '#FFFFFF' },
   swiggy: { short: 'S', bg: '#FC8019', fg: '#FFFFFF' },
+  eatsure: { short: 'ES', bg: '#EA580C', fg: '#FFFFFF' },
   amazon: { short: 'a', bg: '#0F172A', fg: '#FFFFFF' },
   blinkit: { short: 'B', bg: '#EAB308', fg: '#0F172A' },
   flipkart: { short: 'F', bg: '#2563EB', fg: '#FFFFFF' },
@@ -15,6 +16,7 @@ const APP_BADGE_MAP: Record<AppId, { short: string; bg: string; fg: string }> = 
   myntra: { short: 'M', bg: '#DB2777', fg: '#FFFFFF' },
   uber: { short: 'U', bg: '#1E293B', fg: '#FFFFFF' },
   bookmyshow: { short: 'BM', bg: '#DC2626', fg: '#FFFFFF' },
+  upi_payment: { short: 'UPI', bg: '#0D9488', fg: '#FFFFFF' },
   manual: { short: '₹', bg: '#475569', fg: '#FFFFFF' },
 };
 

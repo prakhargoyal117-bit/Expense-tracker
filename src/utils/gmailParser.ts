@@ -38,6 +38,12 @@ const APP_MATCHERS: AppMatcher[] = [
     patterns: [/swiggy/i, /instamart/i],
   },
   {
+    appId: 'eatsure',
+    category: ExpenseCategory.FOOD,
+    displayName: 'EatSure',
+    patterns: [/eatsure/i, /eat\s*sure/i, /ovenstory/i],
+  },
+  {
     appId: 'amazon',
     category: ExpenseCategory.SHOPPING,
     displayName: 'Amazon',
@@ -198,6 +204,303 @@ export function parseGmailReceiptMessage(msg: GmailRawMessage): ExpenseEntry | n
     appId: matcher.appId,
     source: 'app_sync',
     notes: 'Imported from Gmail receipt',
+  };
+}
+
+interface PaymentAppMatcher {
+  name: string;
+  patterns: RegExp[];
+}
+
+const ONLINE_PAYMENT_APP_MATCHERS: PaymentAppMatcher[] = [
+  {
+    name: 'Google Pay',
+    patterns: [
+      /google\s*pay/i,
+      /\bgpay\b/i,
+      /@ok(?:icici|axis|sbi|hdfcbank)\b/i,
+    ],
+  },
+  {
+    name: 'PhonePe',
+    patterns: [/phonepe/i, /@(?:ybl|ibl|axl)\b/i],
+  },
+  {
+    name: 'Paytm',
+    patterns: [/paytm/i, /one97/i],
+  },
+  {
+    name: 'BHIM UPI',
+    patterns: [/\bbhim\b/i, /@upi\b/i],
+  },
+  {
+    name: 'CRED',
+    patterns: [/\bcred(?:\s*pay)?\b/i, /cred\.club/i],
+  },
+  {
+    name: 'Amazon Pay',
+    patterns: [/amazon\s*pay/i, /amazonpay/i],
+  },
+  {
+    name: 'Razorpay',
+    patterns: [/razorpay/i],
+  },
+  {
+    name: 'Cashfree',
+    patterns: [/cashfree/i],
+  },
+  {
+    name: 'MobiKwik',
+    patterns: [/mobikwik/i],
+  },
+  {
+    name: 'Freecharge',
+    patterns: [/freecharge/i],
+  },
+  {
+    name: 'PayZapp',
+    patterns: [/payzapp/i],
+  },
+  {
+    name: 'Jupiter',
+    patterns: [/\bjupiter\b/i],
+  },
+  {
+    name: 'Slice',
+    patterns: [/\bslice\s*(?:pay|upi|card)?\b/i],
+  },
+  {
+    name: 'Navi UPI',
+    patterns: [/\bnavi\s*upi\b/i],
+  },
+  {
+    name: 'UPI Payment App',
+    patterns: [
+      /\bupi\s*(?:ref|reference|id|txn|transaction|payment)\b/i,
+      /\b(?:paid|debited|sent)\s*(?:via|using|through|by)\s*upi\b/i,
+      /\bvpa\b/i,
+    ],
+  },
+];
+
+export function detectOnlinePaymentApp(
+  from: string,
+  subject: string,
+  text: string,
+): string | null {
+  const combined = `${from}\n${subject}\n${text.slice(0, 600)}`;
+  for (const matcher of ONLINE_PAYMENT_APP_MATCHERS) {
+    if (matcher.patterns.some((re) => re.test(combined))) {
+      return matcher.name;
+    }
+  }
+  return null;
+}
+
+function inferExpenseCategory(text: string): ExpenseCategory {
+  if (
+    /\b(chai|tea|coffee|cafe|canteen|mess|biryani|pizza|burger|food|bakery|kitchen|restaurant|dhaba|tiffin|eatsure|zomato|swiggy)\b/i.test(
+      text,
+    )
+  ) {
+    return ExpenseCategory.FOOD;
+  }
+  if (
+    /\b(uber|ola|rapido|metro|auto|cab|rickshaw|bus|train|irctc|petrol|fuel|parking|toll)\b/i.test(
+      text,
+    )
+  ) {
+    return ExpenseCategory.TRANSPORT;
+  }
+  if (
+    /\b(grocery|groceries|mart|supermarket|kirana|milk|dairy|blinkit|zepto|instamart|bigbasket)\b/i.test(
+      text,
+    )
+  ) {
+    return ExpenseCategory.GROCERIES;
+  }
+  if (
+    /\b(xerox|print|book|stationery|tuition|exam|library|campus|college|course|notebook)\b/i.test(
+      text,
+    )
+  ) {
+    return ExpenseCategory.ACADEMICS;
+  }
+  if (
+    /\b(movie|cinema|bookmyshow|netflix|spotify|prime|hotstar|ticket|concert|gaming)\b/i.test(
+      text,
+    )
+  ) {
+    return ExpenseCategory.ENTERTAINMENT;
+  }
+  if (/\b(amazon|flipkart|myntra|ajio|nykaa|store|shop|apparel)\b/i.test(text)) {
+    return ExpenseCategory.SHOPPING;
+  }
+  return ExpenseCategory.OTHER;
+}
+
+function extractPayeeName(text: string, paymentAppName: string): string {
+  const patterns = [
+    /(?:paid|sent|transferred|payment(?:\s+successful|\s+confirmed)?(?:\s+of)?)\s+(?:(?:₹|rs\.?|inr)\s*[0-9][0-9,]*(?:\.[0-9]{1,2})?\s+)?to\s+([A-Za-z0-9][A-Za-z0-9 &.'\-\/]{1,42}?)(?=\s+(?:via|using|through|on|for|at|upi|ref|with|from)\b|[.,;\n]|$)/i,
+    /(?:merchant|payee|beneficiary)\s*[:\-]\s*([A-Za-z0-9][A-Za-z0-9 &.'\-\/]{1,42}?)(?=\s+(?:via|upi|ref)\b|[.,;\n]|$)/i,
+    /\b(?:paid|debited).*?\bto\s+([A-Za-z0-9][A-Za-z0-9 &.'\-\/]{1,42}?)(?=\s+(?:via|using|through|on|for|at|upi|ref|with)\b|[.,;\n]|$)/i,
+    /\bat\s+([A-Za-z0-9][A-Za-z0-9 &.'\-\/]{1,42}?)(?=\s+(?:via|using|on|upi|ref)\b|[.,;\n]|$)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = pattern.exec(text);
+    const candidate = match?.[1]?.trim();
+    if (
+      candidate &&
+      candidate.length >= 2 &&
+      !/^(?:your|the|upi|account|a\/c)$/i.test(candidate)
+    ) {
+      return candidate;
+    }
+  }
+
+  return `${paymentAppName} Payment`;
+}
+
+function extractUpiRef(text: string): string | null {
+  const match =
+    /(?:upi\s*(?:ref(?:\s*no\.?)?|id|txn(?:\s*id)?)|transaction\s*(?:id|ref(?:erence)?)|utr)\s*[:#\-]?\s*([A-Za-z0-9]{6,24})/i.exec(
+      text,
+    );
+  return match?.[1] ?? null;
+}
+
+export function parseOnlinePaymentReceipt(
+  msg: GmailRawMessage & { defaultDate?: string },
+): ExpenseEntry | null {
+  const from = msg.headers.from ?? '';
+  const subject = msg.headers.subject ?? '';
+  const body = msg.bodyText ?? msg.snippet ?? '';
+  const fullText = `${subject}\n${msg.snippet ?? ''}\n${body}`.trim();
+
+  if (!fullText) return null;
+
+  // Reject OTPs / verification codes
+  if (
+    /\b(otp|one[\s-]*time\s*password|verification\s*code|login\s*code|do\s*not\s*share\s*(?:this|your)?\s*(?:code|otp))\b/i.test(
+      fullText,
+    )
+  ) {
+    return null;
+  }
+
+  // Reject promotional / cashback / reward spam
+  if (
+    /\b(win\s*(?:up\s*to|upto)|scratch\s*card|refer\s*(?:&|and)\s*earn|pre[\s-]*approved|apply\s*now|flat\s*\d+%\s*off|claim\s*(?:your\s*)?(?:reward|cashback)|unlocked\s*a\s*reward)\b/i.test(
+      fullText,
+    )
+  ) {
+    return null;
+  }
+
+  // Reject incoming credits / money received / refunds (only read outgoing payment receipts)
+  if (
+    /\b(credited\s*(?:to|in|into|with)|money\s*received|you\s*(?:have\s*)?received|received\s*(?:from|₹|rs\.?|inr)|refund\s*(?:processed|credited|initiated)|cashback\s*credited)\b/i.test(
+      fullText,
+    )
+  ) {
+    return null;
+  }
+
+  // Must confirm an outgoing payment / receipt
+  const hasPaymentConfirmation =
+    /\b(paid|debited|payment\s*(?:of|to|successful|success|confirmed|completed|receipt)|sent\s*(?:to|₹|rs\.?|inr)|upi\s*(?:ref|txn|transaction)|transaction\s*(?:id|ref|successful)|bill\s*paid|order\s*paid|receipt)\b/i.test(
+      fullText,
+    );
+  if (!hasPaymentConfirmation) return null;
+
+  const paymentAppName = detectOnlinePaymentApp(from, subject, fullText);
+  if (!paymentAppName) return null;
+
+  const amount = extractAmountINR(fullText);
+  if (!amount) return null;
+
+  const payee = extractPayeeName(fullText, paymentAppName);
+  const matchedMerchantApp = matchAppFromEmail('', payee, payee);
+  const upiRef = extractUpiRef(fullText);
+
+  let date: string;
+  let time: string;
+  if (msg.internalDate || msg.headers.date) {
+    const formatted = formatEmailDateTime(msg.internalDate, msg.headers.date);
+    date = formatted.date;
+    time = formatted.time;
+  } else {
+    const inlineDateMatch = /\b(\d{4}-\d{2}-\d{2})\b/.exec(fullText);
+    date = inlineDateMatch?.[1] ?? msg.defaultDate ?? '2026-11-15';
+    time = '18:00';
+  }
+
+  const merchantLabel = payee.toLowerCase().includes(paymentAppName.toLowerCase())
+    ? payee
+    : `${payee} (${paymentAppName})`;
+
+  return {
+    id: msg.id.startsWith('gmail-') || msg.id.startsWith('pay-') ? msg.id : `pay-${msg.id}`,
+    merchant: merchantLabel.slice(0, 90),
+    amount,
+    date,
+    time,
+    mode: PaymentMode.ONLINE,
+    category: matchedMerchantApp?.category ?? inferExpenseCategory(`${payee} ${fullText}`),
+    appId: matchedMerchantApp?.appId ?? 'upi_payment',
+    source: 'app_sync',
+    notes: upiRef
+      ? `${paymentAppName} payment receipt · Ref ${upiRef}`
+      : `${paymentAppName} payment receipt`,
+  };
+}
+
+export interface PaymentReceiptBatchResult {
+  receipts: ExpenseEntry[];
+  totalScanned: number;
+  ignoredCount: number;
+}
+
+export function parsePaymentAppReceiptBatch(
+  rawText: string,
+  defaultDate?: string,
+): PaymentReceiptBatchResult {
+  const blocks = rawText
+    .split(/\n\s*(?:---+|===+)\s*\n|\n{2,}/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+
+  // If user pasted multiple single-line receipts separated by single newlines
+  const candidates =
+    blocks.length === 1 && blocks[0].includes('\n')
+      ? blocks[0]
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .filter(Boolean)
+      : blocks;
+
+  const receipts: ExpenseEntry[] = [];
+  let ignoredCount = 0;
+
+  candidates.forEach((block, idx) => {
+    const parsed = parseOnlinePaymentReceipt({
+      id: `pay-${Date.now()}-${idx}`,
+      headers: {},
+      bodyText: block,
+      defaultDate,
+    });
+    if (parsed) {
+      receipts.push(parsed);
+    } else {
+      ignoredCount += 1;
+    }
+  });
+
+  return {
+    receipts,
+    totalScanned: candidates.length,
+    ignoredCount,
   };
 }
 

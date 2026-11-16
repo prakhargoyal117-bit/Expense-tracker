@@ -13,6 +13,16 @@ import {
   type ValidationErrors,
 } from '../types/expense';
 
+export function formatAppLabel(appId: AppId, apps?: ConnectedApp[]): string {
+  if (appId === 'manual') return 'Manual';
+  if (appId === 'upi_payment') return 'Online Payment Apps';
+  if (appId === 'eatsure') return 'EatSure';
+  if (appId === 'bookmyshow') return 'BookMyShow';
+  const found = apps?.find((a) => a.id === appId);
+  if (found) return found.name;
+  return appId.charAt(0).toUpperCase() + appId.slice(1);
+}
+
 export function formatINR(amount: number): string {
   const rounded = Math.round(amount);
   return new Intl.NumberFormat('en-IN', {

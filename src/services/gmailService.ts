@@ -2,7 +2,10 @@ import type { ExpenseEntry } from '../types/expense';
 import {
   type GmailRawMessage,
   parseGmailReceiptMessage,
+  parseOnlinePaymentReceipt,
 } from '../utils/gmailParser';
+
+export type GmailScanScope = 'all' | 'orders' | 'payment_apps';
 
 interface GmailListResponse {
   messages?: Array<{ id: string; threadId: string }>;
@@ -73,12 +76,24 @@ export interface GmailScanResult {
   importedEntries: ExpenseEntry[];
 }
 
+const ORDER_APPS_QUERY =
+  '(from:(zomato OR swiggy OR eatsure OR amazon OR blinkit OR flipkart OR zepto OR myntra OR uber OR bookmyshow) OR subject:(Zomato OR Swiggy OR EatSure OR Amazon OR Blinkit OR Flipkart OR Zepto OR Uber)) (order OR receipt OR invoice OR delivered OR trip OR ticket)';
+
+const PAYMENT_APPS_QUERY =
+  '("Google Pay" OR GPay OR PhonePe OR Paytm OR BHIM OR CRED OR Razorpay OR Cashfree OR "Amazon Pay" OR MobiKwik OR Freecharge OR PayZapp OR UPI) (paid OR debited OR "payment receipt" OR "payment successful" OR "transaction id" OR "UPI Ref") -OTP -"verification code" -"scratch card"';
+
 export async function scanGmailOrderReceipts(
   accessToken: string,
+  scope: GmailScanScope = 'all',
 ): Promise<GmailScanResult> {
-  const query = encodeURIComponent(
-    '(from:(zomato OR swiggy OR amazon OR blinkit OR flipkart OR zepto OR myntra OR uber OR bookmyshow) OR subject:(Zomato OR Swiggy OR Amazon OR Blinkit OR Flipkart OR Zepto OR Uber)) (order OR receipt OR invoice OR delivered OR trip OR ticket)',
-  );
+  const rawQuery =
+    scope === 'orders'
+      ? ORDER_APPS_QUERY
+      : scope === 'payment_apps'
+        ? PAYMENT_APPS_QUERY
+        : `(${ORDER_APPS_QUERY}) OR (${PAYMENT_APPS_QUERY})`;
+
+  const query = encodeURIComponent(rawQuery);
 
   const listRes = await fetch(
     `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=25`,
@@ -126,13 +141,20 @@ export async function scanGmailOrderReceipts(
       if (key === 'date') headersObj.date = h.value;
     }
 
-    const parsed = parseGmailReceiptMessage({
+    const rawMsg: GmailRawMessage = {
       id: msgData.id,
       internalDate: msgData.internalDate,
       snippet: msgData.snippet,
       headers: headersObj,
       bodyText: extractPlainTextFromPayload(msgData.payload),
-    });
+    };
+
+    const parsed =
+      scope === 'payment_apps'
+        ? parseOnlinePaymentReceipt(rawMsg)
+        : scope === 'orders'
+          ? parseGmailReceiptMessage(rawMsg)
+          : parseGmailReceiptMessage(rawMsg) ?? parseOnlinePaymentReceipt(rawMsg);
 
     if (parsed) {
       importedEntries.push(parsed);

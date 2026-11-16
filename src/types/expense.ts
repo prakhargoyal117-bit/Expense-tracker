@@ -16,6 +16,7 @@ export enum ExpenseCategory {
 export type AppId =
   | 'zomato'
   | 'swiggy'
+  | 'eatsure'
   | 'amazon'
   | 'blinkit'
   | 'flipkart'
@@ -23,6 +24,7 @@ export type AppId =
   | 'myntra'
   | 'uber'
   | 'bookmyshow'
+  | 'upi_payment'
   | 'manual';
 
 export interface PermissionScope {

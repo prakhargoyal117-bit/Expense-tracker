@@ -7,7 +7,7 @@ import {
   type MonthlySummary,
   PaymentMode,
 } from '../types/expense';
-import { formatINR, formatShortDate } from '../utils/analytics';
+import { formatAppLabel, formatINR, formatShortDate } from '../utils/analytics';
 import { AppBrandIcon } from './AppBrandIcon';
 import { DailySpendChart } from './DailySpendChart';
 import type { NavSection } from './Sidebar';
@@ -421,9 +421,7 @@ export function OverviewView({
                     <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
                       <span className="inline-flex items-center gap-2">
                         <AppBrandIcon appId={item.appId} size="sm" />
-                        <span className="capitalize">
-                          {item.appId === 'manual' ? 'Manual' : item.appId}
-                        </span>
+                        <span>{formatAppLabel(item.appId)}</span>
                       </span>
                     </td>
                     <td className="py-3 px-4 text-slate-600 whitespace-nowrap">

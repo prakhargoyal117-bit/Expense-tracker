@@ -8,7 +8,7 @@ import {
   type ExpenseFilters,
   PaymentMode,
 } from '../types/expense';
-import { formatINR } from '../utils/analytics';
+import { formatAppLabel, formatINR } from '../utils/analytics';
 import { AppBrandIcon } from './AppBrandIcon';
 
 interface TransactionsViewProps {
@@ -237,9 +237,7 @@ export function TransactionsView({
                     <td className="py-3 px-4 whitespace-nowrap text-slate-700">
                       <span className="inline-flex items-center gap-2">
                         <AppBrandIcon appId={item.appId} size="sm" />
-                        <span className="capitalize">
-                          {item.appId === 'manual' ? 'Manual' : item.appId}
-                        </span>
+                        <span>{formatAppLabel(item.appId, apps)}</span>
                       </span>
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap text-slate-600">

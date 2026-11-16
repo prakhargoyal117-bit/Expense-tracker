@@ -63,6 +63,18 @@ export const INITIAL_APPS: ConnectedApp[] = [
     scopes: makeScopes('Swiggy', true),
   },
   {
+    id: 'eatsure',
+    name: 'EatSure',
+    category: ExpenseCategory.FOOD,
+    shortDescription: 'Faasos, Behrouz Biryani, Oven Story & multi-brand food court orders.',
+    accentHex: '#EA580C',
+    isConnected: true,
+    connectedAt: '2026-10-04T11:30:00.000Z',
+    lastSyncedAt: '2026-11-15T08:40:00.000Z',
+    accountHandle: 'aarav.sharma@campus.edu',
+    scopes: makeScopes('EatSure', true),
+  },
+  {
     id: 'amazon',
     name: 'Amazon',
     category: ExpenseCategory.SHOPPING,
@@ -145,6 +157,18 @@ export const INITIAL_APPS: ConnectedApp[] = [
     lastSyncedAt: null,
     accountHandle: null,
     scopes: makeScopes('BookMyShow', false),
+  },
+  {
+    id: 'upi_payment',
+    name: 'Online Payment Apps',
+    category: ExpenseCategory.OTHER,
+    shortDescription: 'Read-only payment receipts from GPay, PhonePe, Paytm, BHIM, CRED & Razorpay.',
+    accentHex: '#0D9488',
+    isConnected: true,
+    connectedAt: '2026-10-01T09:00:00.000Z',
+    lastSyncedAt: '2026-11-15T08:40:00.000Z',
+    accountHandle: 'Read-only receipt parser',
+    scopes: makeScopes('Online Payment Apps', true),
   },
 ];
 
@@ -579,6 +603,20 @@ export const APP_SYNC_TEMPLATES: Record<AppId, ExpenseEntry[]> = {
       notes: 'Synced latest order · UPI',
     },
   ],
+  eatsure: [
+    {
+      id: 'sync-eatsure-live',
+      merchant: 'EatSure · Oven Story Medium Pizza & Garlic Bread',
+      amount: 395,
+      date: '2026-11-14',
+      time: '20:15',
+      mode: PaymentMode.ONLINE,
+      category: ExpenseCategory.FOOD,
+      appId: 'eatsure',
+      source: 'app_sync',
+      notes: 'Synced EatSure order · UPI',
+    },
+  ],
   amazon: [
     {
       id: `sync-amazon-live`,
@@ -607,8 +645,26 @@ export const APP_SYNC_TEMPLATES: Record<AppId, ExpenseEntry[]> = {
       notes: 'Synced latest ride · Cash',
     },
   ],
+  upi_payment: [],
   manual: [],
 };
+
+export function mergeMissingApps(existingApps: ConnectedApp[]): ConnectedApp[] {
+  const existingIds = new Set(existingApps.map((a) => a.id));
+  const hasAnyConnected = existingApps.some((a) => a.isConnected);
+  const additions = INITIAL_APPS.filter((a) => !existingIds.has(a.id)).map((a) => ({
+    ...a,
+    isConnected: hasAnyConnected ? a.isConnected : false,
+    connectedAt: hasAnyConnected ? a.connectedAt : null,
+    lastSyncedAt: hasAnyConnected ? a.lastSyncedAt : null,
+    accountHandle: hasAnyConnected ? a.accountHandle : null,
+    scopes: a.scopes.map((s) => ({
+      ...s,
+      granted: hasAnyConnected ? s.granted : false,
+    })),
+  }));
+  return additions.length > 0 ? [...existingApps, ...additions] : existingApps;
+}
 
 export function createInitialVaultData(): VaultData {
   return {

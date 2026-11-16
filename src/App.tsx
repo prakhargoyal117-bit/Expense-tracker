@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { Bell, Lock, Menu, Plus, ShieldCheck } from 'lucide-react';
+import { Bell, Lock, Menu, Plus, PlusCircle, ShieldCheck } from 'lucide-react';
 import {
   type AppId,
   type ConnectedApp,
@@ -18,6 +18,7 @@ import {
   INITIAL_APPS,
   TODAY_DATE,
   createInitialVaultData,
+  mergeMissingApps,
 } from './data/seedData';
 import {
   computeSha256Fingerprint,
@@ -34,7 +35,10 @@ import {
   generateExpensesCsv,
   getAvailableMonths,
 } from './utils/analytics';
-import { parseStatementCsv } from './utils/gmailParser';
+import {
+  parsePaymentAppReceiptBatch,
+  parseStatementCsv,
+} from './utils/gmailParser';
 import {
   DEFAULT_REMINDER_SETTINGS,
   buildNightlySummary,
@@ -53,7 +57,10 @@ import {
   signOutGoogle,
   testFirestoreConnection,
 } from './services/firebaseService';
-import { scanGmailOrderReceipts } from './services/gmailService';
+import {
+  type GmailScanScope,
+  scanGmailOrderReceipts,
+} from './services/gmailService';
 import { Sidebar, type NavSection } from './components/Sidebar';
 import { OverviewView } from './components/OverviewView';
 import { AppInsightsView } from './components/AppInsightsView';
@@ -178,7 +185,10 @@ export default function App() {
                 DEFAULT_VAULT_PASSPHRASE,
               );
               if (!cancelled) {
-                setVault(decrypted);
+                setVault({
+                  ...decrypted,
+                  apps: mergeMissingApps(decrypted.apps),
+                });
                 setActivePassphrase(DEFAULT_VAULT_PASSPHRASE);
                 setIsLocked(false);
                 setIsBootstrapping(false);
@@ -413,7 +423,10 @@ export default function App() {
     if (!envelope) return false;
     try {
       const decrypted = await decryptVaultPayload<VaultData>(envelope, passphrase);
-      setVault(decrypted);
+      setVault({
+        ...decrypted,
+        apps: mergeMissingApps(decrypted.apps),
+      });
       setActivePassphrase(passphrase);
       setIsLocked(false);
       return true;
@@ -506,7 +519,10 @@ export default function App() {
       setEnvelope(backupEnvelope);
       const fp = await computeSha256Fingerprint(backupEnvelope.ciphertextBase64);
       setVaultFingerprint(fp);
-      setVault(decrypted);
+      setVault({
+        ...decrypted,
+        apps: mergeMissingApps(decrypted.apps),
+      });
       setActivePassphrase(passphrase);
       setIsLocked(false);
 
@@ -556,8 +572,8 @@ export default function App() {
     setCloudSyncStatus(null);
   };
 
-  // Scan Gmail order receipts using in-memory OAuth token
-  const handleScanGmailReceipts = async () => {
+  // Scan Gmail order or payment-app receipts using in-memory OAuth token
+  const handleScanGmailReceipts = async (scope: GmailScanScope = 'all') => {
     const token = getInMemoryGmailToken();
     if (!token) {
       setHasGmailToken(false);
@@ -570,10 +586,12 @@ export default function App() {
     setIsSyncingGmail(true);
     setGmailStatusMessage(null);
     try {
-      const result = await scanGmailOrderReceipts(token);
+      const result = await scanGmailOrderReceipts(token, scope);
       if (result.importedEntries.length === 0) {
         setGmailStatusMessage(
-          `Scanned ${result.scannedCount} recent emails · No new Zomato, Swiggy, Amazon, or UPI receipts found.`,
+          scope === 'payment_apps'
+            ? `Scanned ${result.scannedCount} recent emails · No new online payment app receipts found (OTPs, promos, and credits were ignored).`
+            : `Scanned ${result.scannedCount} recent emails · No new EatSure, Zomato, Swiggy, Amazon, or UPI receipts found.`,
         );
         return;
       }
@@ -619,6 +637,43 @@ export default function App() {
     } finally {
       setIsSyncingGmail(false);
     }
+  };
+
+  // Parse pasted payment receipts from any online payment app (GPay, PhonePe, Paytm, BHIM, CRED, UPI)
+  const handleImportPaymentReceipts = (rawText: string) => {
+    const batch = parsePaymentAppReceiptBatch(rawText, selectedDate || TODAY_DATE);
+    if (batch.receipts.length === 0) {
+      return {
+        imported: 0,
+        ignored: batch.ignoredCount,
+        totalScanned: batch.totalScanned,
+      };
+    }
+
+    const nowIso = new Date().toISOString();
+    updateVault((prev) => {
+      const matchedAppIds = new Set(batch.receipts.map((r) => r.appId));
+      return {
+        ...prev,
+        expenses: [...batch.receipts, ...prev.expenses],
+        apps: prev.apps.map((app) =>
+          matchedAppIds.has(app.id)
+            ? {
+                ...app,
+                isConnected: true,
+                connectedAt: app.connectedAt ?? nowIso,
+                lastSyncedAt: nowIso,
+              }
+            : app,
+        ),
+      };
+    });
+
+    return {
+      imported: batch.receipts.length,
+      ignored: batch.ignoredCount,
+      totalScanned: batch.totalScanned,
+    };
   };
 
   // Import CSV Statement
@@ -973,17 +1028,29 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <PWAInstallButton />
-            <button
-              type="button"
-              onClick={handleLockVault}
-              aria-label="Lock encrypted vault"
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap shrink-0"
-            >
-              <Lock className="w-3.5 h-3.5" aria-hidden="true" />
-              <span className="hidden sm:inline">Lock Vault</span>
-            </button>
+            <div className="inline-flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setCreateVaultModal({ open: true, mode: 'create' })}
+                aria-label="Create personal encrypted vault"
+                data-testid="header-create-vault-box"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-teal-900 bg-teal-50 border border-teal-200 hover:bg-teal-100 rounded-lg transition-colors whitespace-nowrap shrink-0"
+              >
+                <PlusCircle className="w-3.5 h-3.5 text-teal-700" aria-hidden="true" />
+                <span className="hidden sm:inline">Create Vault</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleLockVault}
+                aria-label="Lock encrypted vault"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap shrink-0"
+              >
+                <Lock className="w-3.5 h-3.5" aria-hidden="true" />
+                <span className="hidden sm:inline">Lock Vault</span>
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => setIsAddExpenseOpen(true)}
@@ -1141,6 +1208,7 @@ export default function App() {
               onGoogleSignIn={handleGoogleSignIn}
               onGoogleSignOut={handleGoogleSignOut}
               onScanGmailReceipts={handleScanGmailReceipts}
+              onImportPaymentReceipts={handleImportPaymentReceipts}
               onImportCsvText={handleImportCsvText}
               onPushCloudVault={handlePushCloudVault}
               onPullCloudVault={handlePullCloudVault}
