@@ -269,6 +269,23 @@ export function VaultLockScreen({
             </>
           )}
         </div>
+        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3 text-[11px] text-slate-500">
+          <span>SpendVault — Encrypted Personal Expense Vault</span>
+          <div className="flex items-center gap-3 shrink-0">
+            <a
+              href="/privacy.html"
+              className="font-medium text-teal-800 hover:text-teal-950 hover:underline"
+            >
+              Privacy Policy
+            </a>
+            <a
+              href="/terms.html"
+              className="font-medium text-slate-600 hover:text-slate-900 hover:underline"
+            >
+              Terms
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

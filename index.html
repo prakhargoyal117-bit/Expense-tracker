@@ -30,7 +30,25 @@
     />
   </head>
   <body class="bg-slate-50 text-slate-900 antialiased selection:bg-teal-100 selection:text-teal-900">
-    <div id="root"></div>
+    <div id="root">
+      <main style="max-width:760px;margin:48px auto;padding:24px;font-family:system-ui,-apple-system,sans-serif;color:#0f172a;line-height:1.6;">
+        <h1 style="font-size:28px;font-weight:700;margin:0 0 12px;">SpendVault</h1>
+        <p style="margin:0 0 14px;color:#334155;">
+          SpendVault is a private personal finance, IRCTC train ticket, and online payment receipt tracker built with
+          client-side AES-256-GCM encryption. Track monthly budgets, UPI and cash spending, recurring bills, and
+          expenses across IRCTC, EatSure, Zomato, Swiggy, Amazon, and payment apps directly in your browser without
+          requiring a login.
+        </p>
+        <p style="margin:0 0 20px;color:#475569;font-size:14px;">
+          Optional Google Sign-In enables cross-browser encrypted cloud vault sync, and optional read-only Gmail
+          receipt scanning parses merchant and IRCTC receipts locally inside your browser.
+        </p>
+        <nav aria-label="Legal and policy links" style="display:flex;gap:16px;font-size:14px;">
+          <a href="/privacy.html" style="color:#0f766e;font-weight:600;">Privacy Policy</a>
+          <a href="/terms.html" style="color:#0f766e;font-weight:600;">Terms of Service</a>
+        </nav>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

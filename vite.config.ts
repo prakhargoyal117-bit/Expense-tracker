@@ -18,6 +18,8 @@ export default defineConfig(() => {
           'pwa-192x192.png',
           'pwa-512x512.png',
           'pwa-maskable-512x512.png',
+          'privacy.html',
+          'terms.html',
         ],
         manifest: {
           id: '/',
@@ -54,7 +56,7 @@ export default defineConfig(() => {
         workbox: {
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,woff,woff2}'],
-          navigateFallbackDenylist: [/^\/api\//, /^\/__/],
+          navigateFallbackDenylist: [/^\/api\//, /^\/__/, /^\/privacy/, /^\/terms/],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

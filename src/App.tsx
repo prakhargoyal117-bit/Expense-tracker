@@ -2037,6 +2037,30 @@ export default function App() {
             />
           )}
         </main>
+
+        <footer className="mt-auto border-t border-slate-200 bg-white/80">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-slate-500">
+            <p className="leading-relaxed">
+              <strong className="font-semibold text-slate-700">SpendVault</strong> — Private personal finance, IRCTC
+              ticket &amp; payment receipt vault with client-side AES-256-GCM encryption. Use without login or sync
+              optionally with Google.
+            </p>
+            <div className="flex items-center gap-4 shrink-0">
+              <a
+                href="/privacy.html"
+                className="font-medium text-teal-800 hover:text-teal-950 hover:underline"
+              >
+                Privacy Policy
+              </a>
+              <a
+                href="/terms.html"
+                className="font-medium text-slate-600 hover:text-slate-900 hover:underline"
+              >
+                Terms of Service
+              </a>
+            </div>
+          </div>
+        </footer>
       </div>
 
       {/* Modals */}
