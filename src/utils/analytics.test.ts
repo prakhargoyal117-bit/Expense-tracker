@@ -8,12 +8,85 @@ import {
   generateExpensesCsv,
   validateManualExpense,
 } from './analytics';
-import { INITIAL_APPS, INITIAL_EXPENSES } from '../data/seedData';
-import { ExpenseCategory, PaymentMode } from '../types/expense';
+import { INITIAL_APPS } from '../data/seedData';
+import {
+  ExpenseCategory,
+  PaymentMode,
+  type ExpenseEntry,
+} from '../types/expense';
+
+const TEST_EXPENSES: ExpenseEntry[] = [
+  {
+    id: 'exp-nov-15-1',
+    merchant: 'Zomato · Behrouz Biryani Bowl',
+    amount: 349,
+    date: '2026-11-15',
+    time: '13:10',
+    mode: PaymentMode.ONLINE,
+    category: ExpenseCategory.FOOD,
+    appId: 'zomato',
+    source: 'app_sync',
+  },
+  {
+    id: 'exp-nov-15-2',
+    merchant: 'Campus Canteen · Cold Coffee',
+    amount: 95,
+    date: '2026-11-15',
+    time: '09:05',
+    mode: PaymentMode.CASH,
+    category: ExpenseCategory.FOOD,
+    appId: 'manual',
+    source: 'manual',
+  },
+  {
+    id: 'exp-nov-14-1',
+    merchant: 'Amazon · Wireless Mouse',
+    amount: 1299,
+    date: '2026-11-14',
+    time: '18:20',
+    mode: PaymentMode.ONLINE,
+    category: ExpenseCategory.SHOPPING,
+    appId: 'amazon',
+    source: 'app_sync',
+  },
+  {
+    id: 'exp-nov-10-1',
+    merchant: 'Amazon · Operating Systems Textbook',
+    amount: 845,
+    date: '2026-11-10',
+    time: '14:40',
+    mode: PaymentMode.CASH,
+    category: ExpenseCategory.ACADEMICS,
+    appId: 'amazon',
+    source: 'app_sync',
+  },
+  {
+    id: 'exp-nov-12-1',
+    merchant: 'Swiggy · Bowl Company Meal',
+    amount: 315,
+    date: '2026-11-12',
+    time: '20:10',
+    mode: PaymentMode.ONLINE,
+    category: ExpenseCategory.FOOD,
+    appId: 'swiggy',
+    source: 'app_sync',
+  },
+  {
+    id: 'exp-nov-13-1',
+    merchant: 'Uber · Auto to Library',
+    amount: 145,
+    date: '2026-11-13',
+    time: '10:30',
+    mode: PaymentMode.ONLINE,
+    category: ExpenseCategory.TRANSPORT,
+    appId: 'uber',
+    source: 'app_sync',
+  },
+];
 
 test('computeMonthlySummary totals match sum of online and cash spend', () => {
   const summary = computeMonthlySummary(
-    INITIAL_EXPENSES,
+    TEST_EXPENSES,
     INITIAL_APPS,
     '2026-11',
     12000,
@@ -28,12 +101,12 @@ test('computeMonthlySummary totals match sum of online and cash spend', () => {
 });
 
 test('computeDailySeries covers all days in month and sums cleanly to monthly total', () => {
-  const series = computeDailySeries(INITIAL_EXPENSES, INITIAL_APPS, '2026-11');
+  const series = computeDailySeries(TEST_EXPENSES, INITIAL_APPS, '2026-11');
   assert.equal(series.length, 30);
 
   const seriesTotal = series.reduce((sum, day) => sum + day.totalSpend, 0);
   const summary = computeMonthlySummary(
-    INITIAL_EXPENSES,
+    TEST_EXPENSES,
     INITIAL_APPS,
     '2026-11',
     12000,
@@ -48,7 +121,7 @@ test('computeDailySeries covers all days in month and sums cleanly to monthly to
 });
 
 test('computeAppInsights ranks apps by spend and tracks online vs cash per app', () => {
-  const insights = computeAppInsights(INITIAL_EXPENSES, INITIAL_APPS, '2026-11');
+  const insights = computeAppInsights(TEST_EXPENSES, INITIAL_APPS, '2026-11');
   assert.ok(insights.length >= 4);
 
   for (let i = 1; i < insights.length; i += 1) {
@@ -62,7 +135,7 @@ test('computeAppInsights ranks apps by spend and tracks online vs cash per app',
 });
 
 test('filterExpenses supports mode, appId, month, and search query', () => {
-  const cashOnly = filterExpenses(INITIAL_EXPENSES, {
+  const cashOnly = filterExpenses(TEST_EXPENSES, {
     month: '2026-11',
     search: '',
     mode: PaymentMode.CASH,
@@ -72,7 +145,7 @@ test('filterExpenses supports mode, appId, month, and search query', () => {
   assert.ok(cashOnly.length > 0);
   assert.ok(cashOnly.every((e) => e.mode === PaymentMode.CASH));
 
-  const zomatoSearch = filterExpenses(INITIAL_EXPENSES, {
+  const zomatoSearch = filterExpenses(TEST_EXPENSES, {
     month: '2026-11',
     search: 'biryani',
     mode: 'all',
@@ -110,7 +183,7 @@ test('validateManualExpense rejects invalid fields and accepts valid entry', () 
 });
 
 test('generateExpensesCsv outputs properly escaped header and rows', () => {
-  const csv = generateExpensesCsv(INITIAL_EXPENSES.slice(0, 2), INITIAL_APPS);
+  const csv = generateExpensesCsv(TEST_EXPENSES.slice(0, 2), INITIAL_APPS);
   const lines = csv.split('\n');
   assert.equal(lines.length, 3);
   assert.ok(lines[0].startsWith('Date,Time,Merchant'));

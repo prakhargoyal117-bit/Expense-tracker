@@ -15,6 +15,7 @@ interface SidebarProps {
   onNavigate: (section: NavSection) => void;
   studentName: string;
   campusName: string;
+  avatarUrl?: string | null;
   monthlySpend: number;
   monthlyBudget: number;
   connectedCount: number;
@@ -38,6 +39,7 @@ export function Sidebar({
   onNavigate,
   studentName,
   campusName,
+  avatarUrl,
   monthlySpend,
   monthlyBudget,
   connectedCount,
@@ -49,6 +51,14 @@ export function Sidebar({
   const budgetPct =
     monthlyBudget > 0 ? Math.min(100, Math.round((monthlySpend / monthlyBudget) * 100)) : 0;
   const isOverBudget = monthlySpend > monthlyBudget;
+  const initials =
+    studentName
+      .trim()
+      .split(/\s+/)
+      .map((n) => n[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || 'PV';
 
   const content = (
     <div className="flex flex-col h-full bg-white border-r border-slate-200 w-64 shrink-0">
@@ -111,7 +121,7 @@ export function Sidebar({
       <div className="px-4 pb-4 space-y-4">
         <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
           <div className="flex items-center justify-between text-xs text-slate-600 mb-2">
-            <span className="font-medium text-slate-800">Monthly Allowance</span>
+            <span className="font-medium text-slate-800">Monthly Budget</span>
             <span
               className={`font-mono tabular-nums font-semibold ${
                 isOverBudget ? 'text-red-700' : 'text-slate-900'
@@ -138,11 +148,11 @@ export function Sidebar({
           </div>
         </div>
 
-        {/* Student Profile */}
+        {/* Vault Profile */}
         <div className="pt-3 border-t border-slate-200 flex items-center gap-3">
-          {!avatarError ? (
+          {avatarUrl && !avatarError ? (
             <img
-              src="/src/assets/images/avatar_student_user_1794763156604.jpg"
+              src={avatarUrl}
               alt={studentName}
               referrerPolicy="no-referrer"
               onError={() => setAvatarError(true)}
@@ -150,11 +160,7 @@ export function Sidebar({
             />
           ) : (
             <span className="w-9 h-9 rounded-full bg-teal-700 text-white text-xs font-semibold flex items-center justify-center shrink-0">
-              {studentName
-                .split(' ')
-                .map((n) => n[0])
-                .join('')
-                .slice(0, 2)}
+              {initials}
             </span>
           )}
           <div className="min-w-0">

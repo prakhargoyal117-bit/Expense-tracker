@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { Bell, Lock, Menu, Plus, PlusCircle, ShieldCheck } from 'lucide-react';
+import { Bell, CloudDownload, KeyRound, Lock, Menu, Plus, PlusCircle } from 'lucide-react';
 import {
   type AppId,
   type ConnectedApp,
@@ -54,6 +54,11 @@ import {
   shouldTriggerNightlyReminder,
 } from './utils/reminders';
 import {
+  decideCloudReconciliation,
+  shouldForceGmailConsent,
+} from './utils/vaultSync';
+import {
+  type CloudVaultRecord,
   clearInMemoryGmailToken,
   consumeGoogleRedirectResult,
   deleteCloudEncryptedVault,
@@ -81,6 +86,7 @@ import { AddExpenseModal } from './components/AddExpenseModal';
 import { EditExpenseModal } from './components/EditExpenseModal';
 import { PermissionConsentModal } from './components/PermissionConsentModal';
 import { VaultLockScreen } from './components/VaultLockScreen';
+import { VaultBootstrapSkeleton } from './components/VaultBootstrapSkeleton';
 import {
   CreateVaultModal,
   type NewPersonalVaultInput,
@@ -88,7 +94,8 @@ import {
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator } from './components/OfflineIndicator';
 
-const STORAGE_KEY = 'campusledger_e2ee_vault_v1';
+const LEGACY_STORAGE_KEY = 'campusledger_e2ee_vault_v1';
+const STORAGE_KEY = 'campusledger_e2ee_vault_v2';
 
 const SECTION_TITLES: Record<NavSection, string> = {
   overview: 'Overview',
@@ -158,6 +165,32 @@ export default function App() {
   const [cloudSyncStatus, setCloudSyncStatus] = useState<string | null>(null);
   const [lastCloudSyncAt, setLastCloudSyncAt] = useState<string | null>(null);
   const [isCloudBusy, setIsCloudBusy] = useState<boolean>(false);
+  const [pendingCloudRecord, setPendingCloudRecord] =
+    useState<CloudVaultRecord | null>(null);
+  const [cloudBannerPassphrase, setCloudBannerPassphrase] = useState<string>('');
+  const [cloudBannerError, setCloudBannerError] = useState<string | null>(null);
+  const [isUnlockingCloudBanner, setIsUnlockingCloudBanner] =
+    useState<boolean>(false);
+
+  const vaultRef = useRef<VaultData | null>(null);
+  const envelopeRef = useRef<EncryptedVaultEnvelope | null>(null);
+  const googleUserRef = useRef<User | null>(null);
+  const gmailMissingScopeRef = useRef<boolean>(false);
+  const localPersistTimerRef = useRef<number | null>(null);
+  const cloudPushTimerRef = useRef<number | null>(null);
+  const reconciledUidRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    vaultRef.current = vault;
+  }, [vault]);
+
+  useEffect(() => {
+    envelopeRef.current = envelope;
+  }, [envelope]);
+
+  useEffect(() => {
+    googleUserRef.current = googleUser;
+  }, [googleUser]);
 
   const [filters, setFilters] = useState<ExpenseFilters>({
     month: CURRENT_MONTH,
@@ -167,11 +200,52 @@ export default function App() {
     category: 'all',
   });
 
+  const scheduleCloudAutoPush = useCallback(
+    (uid: string, envToPush: EncryptedVaultEnvelope, immediate = false) => {
+      if (cloudPushTimerRef.current !== null) {
+        window.clearTimeout(cloudPushTimerRef.current);
+        cloudPushTimerRef.current = null;
+      }
+
+      const runPush = async () => {
+        try {
+          await saveCloudEncryptedVault(uid, envToPush);
+          const nowIso = new Date().toISOString();
+          setLastCloudSyncAt(nowIso);
+        } catch {
+          // Non-fatal background sync error; user can retry manually in Apps & Security
+        }
+      };
+
+      if (immediate) {
+        void runPush();
+      } else {
+        cloudPushTimerRef.current = window.setTimeout(() => {
+          cloudPushTimerRef.current = null;
+          void runPush();
+        }, 1200);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (localPersistTimerRef.current !== null) {
+        window.clearTimeout(localPersistTimerRef.current);
+      }
+      if (cloudPushTimerRef.current !== null) {
+        window.clearTimeout(cloudPushTimerRef.current);
+      }
+    };
+  }, []);
+
   const persistEncryptedVault = useCallback(
     async (
       nextVault: VaultData,
       passphrase: string,
       hasCustomPassphrase: boolean,
+      options?: { skipCloudSync?: boolean; immediateCloud?: boolean },
     ): Promise<EncryptedVaultEnvelope> => {
       const nextEnvelope = await encryptVaultPayload(
         nextVault,
@@ -180,11 +254,120 @@ export default function App() {
       );
       localStorage.setItem(STORAGE_KEY, JSON.stringify(nextEnvelope));
       setEnvelope(nextEnvelope);
+      envelopeRef.current = nextEnvelope;
       const fp = await computeSha256Fingerprint(nextEnvelope.ciphertextBase64);
       setVaultFingerprint(fp);
+
+      const signedInUser = googleUserRef.current;
+      if (signedInUser && !options?.skipCloudSync) {
+        scheduleCloudAutoPush(
+          signedInUser.uid,
+          nextEnvelope,
+          Boolean(options?.immediateCloud),
+        );
+      }
       return nextEnvelope;
     },
+    [scheduleCloudAutoPush],
+  );
+
+  const applyDecryptedVault = useCallback(
+    async (
+      backupEnvelope: EncryptedVaultEnvelope,
+      passphrase: string,
+    ): Promise<boolean> => {
+      try {
+        const decrypted = await decryptVaultPayload<VaultData>(
+          backupEnvelope,
+          passphrase,
+        );
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(backupEnvelope));
+        setEnvelope(backupEnvelope);
+        envelopeRef.current = backupEnvelope;
+        const fp = await computeSha256Fingerprint(backupEnvelope.ciphertextBase64);
+        setVaultFingerprint(fp);
+        const normalizedVault: VaultData = {
+          ...decrypted,
+          apps: mergeMissingApps(decrypted.apps),
+        };
+        setVault(normalizedVault);
+        vaultRef.current = normalizedVault;
+        setActivePassphrase(passphrase);
+        setIsLocked(false);
+
+        const months = getAvailableMonths(decrypted.expenses);
+        const targetMonth = months[0] ?? CURRENT_MONTH;
+        setSelectedMonth(targetMonth);
+        setFilters({
+          month: targetMonth,
+          search: '',
+          mode: 'all',
+          appId: 'all',
+          category: 'all',
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    },
     [],
+  );
+
+  const reconcileWithCloudVault = useCallback(
+    async (user: User) => {
+      setIsCloudBusy(true);
+      try {
+        const record = await fetchCloudEncryptedVault(user.uid);
+        const action = decideCloudReconciliation({
+          localVault: vaultRef.current,
+          localEnvelope: envelopeRef.current,
+          cloudEnvelope: record?.envelope ?? null,
+        });
+
+        if (action === 'auto_pull_default' && record) {
+          const ok = await applyDecryptedVault(
+            record.envelope,
+            DEFAULT_VAULT_PASSPHRASE,
+          );
+          if (ok) {
+            setPendingCloudRecord(null);
+            setLastCloudSyncAt(record.syncedAtIso);
+            setCloudSyncStatus(
+              `Synced your cloud vault for ${user.email} automatically.`,
+            );
+          } else {
+            setPendingCloudRecord(record);
+            setCloudSyncStatus(
+              `Cloud vault found for ${user.email}. Enter your vault passphrase to open it on this browser.`,
+            );
+          }
+        } else if (action === 'prompt_cloud_unlock' && record) {
+          setPendingCloudRecord(record);
+          setCloudBannerError(null);
+          setCloudSyncStatus(
+            `Cloud vault found for ${user.email} (created on another browser). Enter your vault passphrase to unlock and open it here.`,
+          );
+        } else if (action === 'auto_push_local' && envelopeRef.current) {
+          setPendingCloudRecord(null);
+          await saveCloudEncryptedVault(user.uid, envelopeRef.current);
+          setLastCloudSyncAt(new Date().toISOString());
+          setCloudSyncStatus(
+            `Your local encrypted vault is now backed up to cloud for ${user.email} and ready on any browser.`,
+          );
+        } else if (record) {
+          setPendingCloudRecord(null);
+          setLastCloudSyncAt(record.syncedAtIso);
+          setCloudSyncStatus(
+            `Signed in as ${user.email}. Cloud encrypted vault is up to date.`,
+          );
+        }
+      } catch {
+        // Non-fatal: cloud check failed (e.g. offline); local vault still works
+      } finally {
+        setIsCloudBusy(false);
+      }
+    },
+    [applyDecryptedVault],
   );
 
   // Initialize Firebase connection check, auth state listener, and redirect sign-in result
@@ -192,25 +375,31 @@ export default function App() {
     void testFirestoreConnection();
     const unsub = initFirebaseAuth((user, token) => {
       setGoogleUser(user);
+      googleUserRef.current = user;
       setHasGmailToken(Boolean(token));
+      if (!user) {
+        reconciledUidRef.current = null;
+        setPendingCloudRecord(null);
+      }
     });
 
     void consumeGoogleRedirectResult()
       .then((res) => {
         if (!res) return;
         setGoogleUser(res.user);
+        googleUserRef.current = res.user;
         setHasGmailToken(Boolean(res.accessToken));
         setActiveSection('security');
         setShowRedirectFallback(false);
+        reconciledUidRef.current = res.user.uid;
+        void reconcileWithCloudVault(res.user);
         if (res.accessToken) {
-          setCloudSyncStatus(
-            `Signed in as ${res.user.email}. Cloud encrypted vault sync is ready.`,
-          );
+          gmailMissingScopeRef.current = false;
           setPendingRedirectScan(true);
         } else {
-          const missingMsg = `Signed in as ${res.user.email}, but Gmail read-only permission was not checked on the Google consent screen. Click "Re-authorize Gmail Access" and tick the Gmail box.`;
+          gmailMissingScopeRef.current = true;
+          const missingMsg = `Signed in as ${res.user.email}, but Gmail read-only permission was not checked on the Google consent screen. Click "Reconnect Gmail Scan" and allow Gmail access.`;
           setGmailStatus({ type: 'error', text: missingMsg });
-          setCloudSyncStatus(missingMsg);
         }
       })
       .catch((err) => {
@@ -225,13 +414,28 @@ export default function App() {
       });
 
     return () => unsub();
-  }, []);
+  }, [reconcileWithCloudVault]);
 
-  // Bootstrap encrypted vault from localStorage or initialize fresh encrypted demo vault
+  // Automatically discover or sync cloud vault once bootstrap finishes and user is signed in
+  useEffect(() => {
+    if (isBootstrapping || !googleUser) return;
+    if (reconciledUidRef.current === googleUser.uid) return;
+    reconciledUidRef.current = googleUser.uid;
+    void reconcileWithCloudVault(googleUser);
+  }, [isBootstrapping, googleUser, reconcileWithCloudVault]);
+
+  // Bootstrap encrypted vault from localStorage or initialize clean blank encrypted vault
   useEffect(() => {
     let cancelled = false;
 
     async function bootstrap() {
+      // Remove legacy v1 demo vault so old pre-loaded Aarav Sharma sample data is wiped cleanly
+      try {
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
+      } catch {
+        // Ignore storage restrictions
+      }
+
       const params = new URLSearchParams(window.location.search);
       const autostart = params.get('autostart') === '1';
 
@@ -241,6 +445,7 @@ export default function App() {
           const parsed = JSON.parse(rawStored) as EncryptedVaultEnvelope;
           if (!cancelled) {
             setEnvelope(parsed);
+            envelopeRef.current = parsed;
             const fp = await computeSha256Fingerprint(parsed.ciphertextBase64);
             if (!cancelled) setVaultFingerprint(fp);
           }
@@ -252,10 +457,12 @@ export default function App() {
                 DEFAULT_VAULT_PASSPHRASE,
               );
               if (!cancelled) {
-                setVault({
+                const normalized = {
                   ...decrypted,
                   apps: mergeMissingApps(decrypted.apps),
-                });
+                };
+                setVault(normalized);
+                vaultRef.current = normalized;
                 setActivePassphrase(DEFAULT_VAULT_PASSPHRASE);
                 setIsLocked(false);
                 setIsBootstrapping(false);
@@ -264,6 +471,7 @@ export default function App() {
             } catch {
               if (!cancelled) {
                 setVault(null);
+                vaultRef.current = null;
                 setIsLocked(true);
                 setIsBootstrapping(false);
               }
@@ -272,13 +480,14 @@ export default function App() {
           } else {
             if (!cancelled) {
               setVault(null);
+              vaultRef.current = null;
               setIsLocked(true);
               setIsBootstrapping(false);
             }
             return;
           }
         } catch {
-          // Corrupted JSON in storage; re-seed below
+          // Corrupted JSON in storage; re-initialize clean vault below
         }
       }
 
@@ -292,7 +501,9 @@ export default function App() {
       const fp = await computeSha256Fingerprint(initialEnvelope.ciphertextBase64);
       if (!cancelled) {
         setVault(initial);
+        vaultRef.current = initial;
         setEnvelope(initialEnvelope);
+        envelopeRef.current = initialEnvelope;
         setActivePassphrase(DEFAULT_VAULT_PASSPHRASE);
         setVaultFingerprint(fp);
         setIsLocked(false);
@@ -306,20 +517,28 @@ export default function App() {
     };
   }, []);
 
+  // Debounced local encryption + background cloud auto-sync so UI edits stay instant with zero lag
   const updateVault = useCallback(
     (updater: (prev: VaultData) => VaultData) => {
       setVault((prev) => {
         if (!prev) return prev;
         const next = updater(prev);
-        void persistEncryptedVault(
-          next,
-          activePassphrase,
-          envelope?.hasCustomPassphrase ?? false,
-        );
+        vaultRef.current = next;
+
+        if (localPersistTimerRef.current !== null) {
+          window.clearTimeout(localPersistTimerRef.current);
+        }
+        const passSnapshot = activePassphrase;
+        const customSnapshot = envelopeRef.current?.hasCustomPassphrase ?? false;
+        localPersistTimerRef.current = window.setTimeout(() => {
+          localPersistTimerRef.current = null;
+          void persistEncryptedVault(next, passSnapshot, customSnapshot);
+        }, 250);
+
         return next;
       });
     },
-    [activePassphrase, envelope?.hasCustomPassphrase, persistEncryptedVault],
+    [activePassphrase, persistEncryptedVault],
   );
 
   // Sync month selection with filters
@@ -428,6 +647,9 @@ export default function App() {
         if (err instanceof GmailAuthError) {
           clearInMemoryGmailToken();
           setHasGmailToken(false);
+          gmailMissingScopeRef.current =
+            message.includes('403') ||
+            message.toLowerCase().includes('permission was not checked');
           setGmailStatus({ type: 'error', text: message });
         }
         setAppSyncStatus({ type: 'error', text: message });
@@ -528,37 +750,86 @@ export default function App() {
 
   const handleSetPassphrase = async (newPassphrase: string) => {
     if (!vault) return;
-    await persistEncryptedVault(vault, newPassphrase, true);
+    await persistEncryptedVault(vault, newPassphrase, true, {
+      immediateCloud: true,
+    });
     setActivePassphrase(newPassphrase);
   };
 
   const handleLockVault = () => {
+    if (localPersistTimerRef.current !== null && vaultRef.current) {
+      window.clearTimeout(localPersistTimerRef.current);
+      localPersistTimerRef.current = null;
+      void persistEncryptedVault(
+        vaultRef.current,
+        activePassphrase,
+        envelopeRef.current?.hasCustomPassphrase ?? false,
+        { immediateCloud: true },
+      );
+    }
     setVault(null);
+    vaultRef.current = null;
     setActivePassphrase('');
     setIsLocked(true);
   };
 
   const handleUnlockVault = async (passphrase: string): Promise<boolean> => {
     if (!envelope) return false;
-    try {
-      const decrypted = await decryptVaultPayload<VaultData>(envelope, passphrase);
-      setVault({
-        ...decrypted,
-        apps: mergeMissingApps(decrypted.apps),
-      });
-      setActivePassphrase(passphrase);
-      setIsLocked(false);
-      return true;
-    } catch {
-      return false;
-    }
+    return applyDecryptedVault(envelope, passphrase);
   };
 
-  const handleResetDemoVault = async () => {
-    const initial = createInitialVaultData();
-    await persistEncryptedVault(initial, DEFAULT_VAULT_PASSPHRASE, false);
-    setVault(initial);
+  const handleUnlockPendingCloudVault = async (
+    passphrase: string,
+  ): Promise<boolean> => {
+    if (!pendingCloudRecord) return false;
+    const ok = await applyDecryptedVault(pendingCloudRecord.envelope, passphrase);
+    if (ok) {
+      setLastCloudSyncAt(pendingCloudRecord.syncedAtIso);
+      setPendingCloudRecord(null);
+      setCloudBannerPassphrase('');
+      setCloudBannerError(null);
+      setCloudSyncStatus(
+        'Cloud encrypted vault unlocked and synced to this browser.',
+      );
+    }
+    return ok;
+  };
+
+  const handleWipeAllData = async () => {
+    if (localPersistTimerRef.current !== null) {
+      window.clearTimeout(localPersistTimerRef.current);
+      localPersistTimerRef.current = null;
+    }
+    if (cloudPushTimerRef.current !== null) {
+      window.clearTimeout(cloudPushTimerRef.current);
+      cloudPushTimerRef.current = null;
+    }
+
+    try {
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Ignore storage errors
+    }
+
+    const signedInUser = googleUserRef.current;
+    if (signedInUser) {
+      try {
+        await deleteCloudEncryptedVault(signedInUser.uid);
+        setLastCloudSyncAt(null);
+      } catch {
+        // Continue clearing local data even if cloud doc did not exist
+      }
+    }
+
+    const clean = createInitialVaultData();
+    await persistEncryptedVault(clean, DEFAULT_VAULT_PASSPHRASE, false, {
+      skipCloudSync: true,
+    });
+    setVault(clean);
+    vaultRef.current = clean;
     setActivePassphrase(DEFAULT_VAULT_PASSPHRASE);
+    setPendingCloudRecord(null);
     setSelectedMonth(CURRENT_MONTH);
     setSelectedDate(TODAY_DATE);
     setFilters({
@@ -569,16 +840,24 @@ export default function App() {
       category: 'all',
     });
     setIsLocked(false);
+    setAppSyncStatus(null);
+    setGmailStatus(null);
+    setCloudSyncStatus(
+      signedInUser
+        ? 'All local and cloud vault data has been permanently deleted. Starting clean.'
+        : 'All local vault data has been deleted. Starting clean.',
+    );
   };
 
-  // Create Personal Vault (blank or seeded)
+  // Create Personal Vault (blank by default)
   const handleCreatePersonalVault = async (input: NewPersonalVaultInput) => {
-    const baseData = createInitialVaultData();
+    const existingExpenses = vault?.expenses ?? [];
+    const existingApps = vault?.apps ?? INITIAL_APPS;
     const freshVault: VaultData = {
       studentName: input.studentName,
       campusName: input.campusName,
       monthlyBudget: input.monthlyBudget,
-      expenses: input.startBlank ? [] : baseData.expenses,
+      expenses: input.startBlank ? [] : existingExpenses,
       apps: input.startBlank
         ? INITIAL_APPS.map((a) => ({
             ...a,
@@ -588,22 +867,25 @@ export default function App() {
             accountHandle: null,
             scopes: a.scopes.map((s) => ({ ...s, granted: false })),
           }))
-        : baseData.apps,
+        : existingApps,
     };
 
     const newEnv = await persistEncryptedVault(
       freshVault,
       input.passphrase,
       true,
+      { skipCloudSync: true },
     );
     setVault(freshVault);
+    vaultRef.current = freshVault;
     setActivePassphrase(input.passphrase);
+    setPendingCloudRecord(null);
     setIsLocked(false);
 
     if (input.startBlank) {
-      setSelectedMonth('all');
+      setSelectedMonth(CURRENT_MONTH);
       setFilters({
-        month: 'all',
+        month: CURRENT_MONTH,
         search: '',
         mode: 'all',
         appId: 'all',
@@ -611,11 +893,13 @@ export default function App() {
       });
     }
 
-    if (googleUser) {
+    if (googleUserRef.current) {
       try {
-        await saveCloudEncryptedVault(googleUser.uid, newEnv);
+        await saveCloudEncryptedVault(googleUserRef.current.uid, newEnv);
         setLastCloudSyncAt(new Date().toISOString());
-        setCloudSyncStatus('Personal encrypted vault created and synced to cloud.');
+        setCloudSyncStatus(
+          'Personal encrypted vault created and synced to cloud for all browsers.',
+        );
       } catch {
         setCloudSyncStatus(
           'Personal vault created locally. Click Push Encrypted Vault to sync to cloud.',
@@ -629,36 +913,11 @@ export default function App() {
     backupEnvelope: EncryptedVaultEnvelope,
     passphrase: string,
   ): Promise<boolean> => {
-    try {
-      const decrypted = await decryptVaultPayload<VaultData>(
-        backupEnvelope,
-        passphrase,
-      );
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(backupEnvelope));
-      setEnvelope(backupEnvelope);
-      const fp = await computeSha256Fingerprint(backupEnvelope.ciphertextBase64);
-      setVaultFingerprint(fp);
-      setVault({
-        ...decrypted,
-        apps: mergeMissingApps(decrypted.apps),
-      });
-      setActivePassphrase(passphrase);
-      setIsLocked(false);
-
-      const months = getAvailableMonths(decrypted.expenses);
-      const targetMonth = months[0] ?? 'all';
-      setSelectedMonth(targetMonth);
-      setFilters({
-        month: targetMonth,
-        search: '',
-        mode: 'all',
-        appId: 'all',
-        category: 'all',
-      });
-      return true;
-    } catch {
-      return false;
+    const ok = await applyDecryptedVault(backupEnvelope, passphrase);
+    if (ok && googleUserRef.current) {
+      scheduleCloudAutoPush(googleUserRef.current.uid, backupEnvelope, true);
     }
+    return ok;
   };
 
   // Scan Gmail order or payment-app receipts using in-memory OAuth token
@@ -743,6 +1002,9 @@ export default function App() {
       if (err instanceof GmailAuthError) {
         clearInMemoryGmailToken();
         setHasGmailToken(false);
+        gmailMissingScopeRef.current =
+          message.includes('403') ||
+          message.toLowerCase().includes('permission was not checked');
       }
       setGmailStatus({
         type: 'error',
@@ -794,22 +1056,32 @@ export default function App() {
     }, GOOGLE_SIGNIN_TIMEOUT_MS);
 
     try {
-      const { user, accessToken } = await signInWithGoogleForVaultAndGmail();
+      const forceConsent = shouldForceGmailConsent({
+        missingScopeFromLastAttempt: gmailMissingScopeRef.current,
+      });
+      const { user, accessToken } = await signInWithGoogleForVaultAndGmail({
+        forceConsent,
+        loginHint: googleUserRef.current?.email ?? undefined,
+      });
       if (signInAttemptIdRef.current !== attemptId) return;
       clearSignInTimers();
       setGoogleUser(user);
+      googleUserRef.current = user;
       setHasGmailToken(Boolean(accessToken));
       setShowRedirectFallback(false);
 
+      reconciledUidRef.current = user.uid;
+      await reconcileWithCloudVault(user);
+
       if (accessToken) {
-        setCloudSyncStatus(
-          `Signed in as ${user.email}. Cloud encrypted vault sync is ready.`,
-        );
-        await handleScanGmailReceipts(scanScope, user.email);
+        gmailMissingScopeRef.current = false;
+        if (vaultRef.current && !isLocked) {
+          await handleScanGmailReceipts(scanScope, user.email);
+        }
       } else {
-        const missingMsg = `Signed in as ${user.email}, but Gmail read-only permission was not granted in the Google consent popup. Click "Re-authorize Gmail Access" and check the Gmail access box.`;
+        gmailMissingScopeRef.current = true;
+        const missingMsg = `Signed in as ${user.email}, but Gmail read-only permission was not granted. Click "Reconnect Gmail Scan" and check the Gmail access box.`;
         setGmailStatus({ type: 'error', text: missingMsg });
-        setCloudSyncStatus(missingMsg);
       }
     } catch (err) {
       if (signInAttemptIdRef.current !== attemptId) return;
@@ -853,7 +1125,10 @@ export default function App() {
       text: 'Redirecting to Google Sign-In...',
     });
     try {
-      await signInWithGoogleRedirectFallback();
+      await signInWithGoogleRedirectFallback({
+        forceConsent: gmailMissingScopeRef.current,
+        loginHint: googleUserRef.current?.email ?? undefined,
+      });
     } catch (err) {
       const host =
         typeof window !== 'undefined' ? window.location.hostname : undefined;
@@ -1039,7 +1314,8 @@ export default function App() {
 
   const summary = useMemo(() => {
     if (!vault) return null;
-    const refDays = selectedMonth === CURRENT_MONTH ? 15 : undefined;
+    const refDays =
+      selectedMonth === CURRENT_MONTH ? new Date().getDate() : undefined;
     return computeMonthlySummary(
       vault.expenses,
       vault.apps,
@@ -1175,25 +1451,26 @@ export default function App() {
   }, [vault, isLocked, nightlySummary, updateVault]);
 
   if (isBootstrapping) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="bg-white border border-slate-200 rounded-xl px-6 py-5 flex items-center gap-3">
-          <ShieldCheck className="w-5 h-5 text-teal-700" aria-hidden="true" />
-          <span className="text-sm font-medium text-slate-700">
-            Decrypting AES-256-GCM vault...
-          </span>
-        </div>
-      </div>
-    );
+    return <VaultBootstrapSkeleton statusText="Decrypting AES-256-GCM vault..." />;
   }
 
   if (isLocked || !vault || !summary) {
     return (
       <>
         <VaultLockScreen
-          envelope={envelope}
+          envelope={pendingCloudRecord?.envelope ?? envelope}
+          googleUser={googleUser}
+          isSigningInGoogle={isSigningInGoogle}
+          isRedirectingGoogle={isRedirectingGoogle}
+          showRedirectFallback={showRedirectFallback}
+          cloudVaultAvailable={Boolean(pendingCloudRecord)}
+          cloudStatus={cloudSyncStatus}
           onUnlock={handleUnlockVault}
-          onResetDemoVault={() => void handleResetDemoVault()}
+          onUnlockCloudVault={handleUnlockPendingCloudVault}
+          onGoogleSignIn={() => handleGoogleSignIn('all')}
+          onGoogleRedirectSignIn={handleGoogleRedirectSignIn}
+          onCancelGoogleSignIn={handleCancelGoogleSignIn}
+          onWipeAllData={handleWipeAllData}
           onOpenCreateVault={(mode) => setCreateVaultModal({ open: true, mode })}
         />
         <CreateVaultModal
@@ -1222,6 +1499,7 @@ export default function App() {
         }}
         studentName={vault.studentName}
         campusName={vault.campusName}
+        avatarUrl={googleUser?.photoURL ?? null}
         monthlySpend={summary.totalSpend}
         monthlyBudget={vault.monthlyBudget}
         connectedCount={connectedCount}
@@ -1331,6 +1609,91 @@ export default function App() {
 
         {/* Main Viewport */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+          {pendingCloudRecord && googleUser && (
+            <section
+              role="region"
+              aria-label="Unlock Cloud Vault"
+              data-testid="cloud-vault-unlock-banner"
+              className="bg-white border border-teal-300 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xs"
+            >
+              <div className="flex items-start gap-3">
+                <span className="w-9 h-9 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-800 shrink-0 mt-0.5">
+                  <CloudDownload className="w-4 h-4" aria-hidden="true" />
+                </span>
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    Encrypted Cloud Vault Found for {googleUser.email}
+                  </h2>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    Enter the passphrase you created on your other browser (e.g. Brave) to decrypt and open your vault here.
+                  </p>
+                  {cloudBannerError && (
+                    <p role="alert" className="text-xs font-medium text-red-700 mt-1">
+                      {cloudBannerError}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setCloudBannerError(null);
+                  if (!cloudBannerPassphrase.trim()) {
+                    setCloudBannerError('Enter your vault passphrase.');
+                    return;
+                  }
+                  setIsUnlockingCloudBanner(true);
+                  const ok = await handleUnlockPendingCloudVault(
+                    cloudBannerPassphrase,
+                  );
+                  setIsUnlockingCloudBanner(false);
+                  if (!ok) {
+                    setCloudBannerError(
+                      'Incorrect passphrase. Try the passphrase you set when creating your vault.',
+                    );
+                  }
+                }}
+                className="flex flex-wrap items-center gap-2 shrink-0"
+              >
+                <div className="relative">
+                  <KeyRound
+                    className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                    aria-hidden="true"
+                  />
+                  <label htmlFor="banner-cloud-passphrase" className="sr-only">
+                    Cloud vault passphrase
+                  </label>
+                  <input
+                    id="banner-cloud-passphrase"
+                    type="password"
+                    value={cloudBannerPassphrase}
+                    onChange={(e) => {
+                      setCloudBannerPassphrase(e.target.value);
+                      setCloudBannerError(null);
+                    }}
+                    placeholder="Vault passphrase"
+                    className="pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={isUnlockingCloudBanner}
+                  className="px-3.5 py-1.5 text-xs font-medium text-white bg-teal-700 hover:bg-teal-800 disabled:opacity-50 rounded-lg transition-colors whitespace-nowrap"
+                >
+                  {isUnlockingCloudBanner ? 'Unlocking...' : 'Open Cloud Vault'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPendingCloudRecord(null)}
+                  className="px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900"
+                >
+                  Dismiss
+                </button>
+              </form>
+            </section>
+          )}
+
           {showNightlyCheckIn && (
             <section
               role="region"
@@ -1450,7 +1813,7 @@ export default function App() {
               onSetPassphrase={handleSetPassphrase}
               onLockVault={handleLockVault}
               onExportEncryptedBackup={handleExportEncryptedBackup}
-              onResetDemoVault={() => void handleResetDemoVault()}
+              onWipeAllData={handleWipeAllData}
               onOpenCreateVault={(mode) =>
                 setCreateVaultModal({ open: true, mode })
               }

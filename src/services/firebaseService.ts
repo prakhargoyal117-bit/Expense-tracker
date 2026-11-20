@@ -30,14 +30,29 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 
-const provider = new GoogleAuthProvider();
-for (const scope of WORKSPACE_SCOPES) {
-  provider.addScope(scope);
+export interface GoogleSignInOptions {
+  forceConsent?: boolean;
+  loginHint?: string | null;
 }
-provider.setCustomParameters({
-  prompt: 'consent select_account',
-  include_granted_scopes: 'true',
-});
+
+function buildGoogleProvider(options?: GoogleSignInOptions): GoogleAuthProvider {
+  const googleProvider = new GoogleAuthProvider();
+  for (const scope of WORKSPACE_SCOPES) {
+    googleProvider.addScope(scope);
+  }
+  const params: Record<string, string> = {
+    include_granted_scopes: 'true',
+  };
+  if (options?.forceConsent) {
+    params.prompt = 'consent select_account';
+  } else if (options?.loginHint) {
+    params.login_hint = options.loginHint;
+  } else {
+    params.prompt = 'select_account';
+  }
+  googleProvider.setCustomParameters(params);
+  return googleProvider;
+}
 
 // Keep OAuth token strictly in memory (never in localStorage or sessionStorage)
 let cachedGmailAccessToken: string | null = null;
@@ -126,7 +141,9 @@ export function initFirebaseAuth(
   });
 }
 
-export async function signInWithGoogleForVaultAndGmail(): Promise<{
+export async function signInWithGoogleForVaultAndGmail(
+  options?: GoogleSignInOptions,
+): Promise<{
   user: User;
   accessToken: string | null;
 }> {
@@ -134,10 +151,11 @@ export async function signInWithGoogleForVaultAndGmail(): Promise<{
     return activeSignInPromise;
   }
 
+  const googleProvider = buildGoogleProvider(options);
   isSigningIn = true;
   activeSignInPromise = (async () => {
     try {
-      const result = await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, googleProvider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
       cachedGmailAccessToken = credential?.accessToken ?? null;
       return { user: result.user, accessToken: cachedGmailAccessToken };
@@ -155,14 +173,17 @@ export function resetPendingGoogleSignIn(): void {
   activeSignInPromise = null;
 }
 
-export async function signInWithGoogleRedirectFallback(): Promise<void> {
+export async function signInWithGoogleRedirectFallback(
+  options?: GoogleSignInOptions,
+): Promise<void> {
   if (typeof window !== 'undefined' && window.self !== window.top) {
     throw new Error(
       'Redirect sign-in cannot run inside an embedded preview frame. Allow popups or open the standalone app URL in a browser tab.',
     );
   }
   resetPendingGoogleSignIn();
-  await signInWithRedirect(auth, provider);
+  const googleProvider = buildGoogleProvider(options);
+  await signInWithRedirect(auth, googleProvider);
 }
 
 export async function consumeGoogleRedirectResult(): Promise<{

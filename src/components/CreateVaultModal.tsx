@@ -317,7 +317,7 @@ export function CreateVaultModal({
               <span>
                 <strong className="text-slate-900">Start with a clean, blank ledger</strong>
                 <span className="block text-slate-500 mt-0.5">
-                  Removes pre-loaded demo transactions so you can import your own Gmail receipts, CSVs, and cash logs.
+                  Starts with zero transactions so you only see expenses you add, import, or scan from Gmail. Sign in with Google to auto-sync across Brave, Chrome, and mobile.
                 </span>
               </span>
             </label>
