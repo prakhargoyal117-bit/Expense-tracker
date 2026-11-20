@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   BarChart3,
   ChevronRight,
+  Home,
   LayoutDashboard,
   ListOrdered,
   ShieldCheck,
@@ -20,6 +21,7 @@ export type NavSection =
 interface SidebarProps {
   activeSection: NavSection;
   onNavigate: (section: NavSection) => void;
+  onGoHome?: () => void;
   displayName: string;
   profileLabel: string;
   avatarColor?: string;
@@ -46,6 +48,7 @@ const NAV_ITEMS: Array<{
 export function Sidebar({
   activeSection,
   onNavigate,
+  onGoHome,
   displayName,
   profileLabel,
   avatarColor = '#0F766E',
@@ -132,6 +135,23 @@ export function Sidebar({
             </button>
           );
         })}
+
+        {onGoHome && (
+          <div className="pt-3 mt-3 border-t border-slate-100">
+            <button
+              type="button"
+              data-testid="sidebar-home-menu-btn"
+              onClick={() => {
+                onGoHome();
+                onCloseMobile();
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+            >
+              <Home className="w-[18px] h-[18px] text-slate-400 shrink-0" aria-hidden="true" />
+              <span className="truncate">Home Menu</span>
+            </button>
+          </div>
+        )}
       </nav>
 
       {/* Budget Pace & Interactive Profile Card */}

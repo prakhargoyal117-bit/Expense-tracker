@@ -95,6 +95,7 @@ import { EditExpenseModal } from './components/EditExpenseModal';
 import { PermissionConsentModal } from './components/PermissionConsentModal';
 import { VaultLockScreen } from './components/VaultLockScreen';
 import { VaultBootstrapSkeleton } from './components/VaultBootstrapSkeleton';
+import { HomeMenuView } from './components/HomeMenuView';
 import {
   CreateVaultModal,
   type NewPersonalVaultInput,
@@ -122,6 +123,11 @@ export default function App() {
   const [vaultFingerprint, setVaultFingerprint] = useState<string>('');
   const [isLocked, setIsLocked] = useState<boolean>(false);
   const [isBootstrapping, setIsBootstrapping] = useState<boolean>(true);
+  const [showHomeMenu, setShowHomeMenu] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('autostart') !== '1';
+  });
 
   const [activeSection, setActiveSection] = useState<NavSection>('overview');
   const [selectedMonth, setSelectedMonth] = useState<string>(CURRENT_MONTH);
@@ -835,6 +841,7 @@ export default function App() {
     vaultRef.current = null;
     setActivePassphrase('');
     setIsLocked(true);
+    setShowHomeMenu(true);
   };
 
   const handleUnlockVault = async (passphrase: string): Promise<boolean> => {
@@ -857,6 +864,89 @@ export default function App() {
       );
     }
     return ok;
+  };
+
+  const handleCreateGmailInsidePassword = async (
+    password: string,
+  ): Promise<boolean> => {
+    try {
+      let targetVault = vaultRef.current;
+      if (!targetVault && envelope && !envelope.hasCustomPassphrase) {
+        const decrypted = await decryptVaultPayload<VaultData>(
+          envelope,
+          DEFAULT_VAULT_PASSPHRASE,
+        );
+        targetVault = {
+          ...decrypted,
+          apps: mergeMissingApps(decrypted.apps ?? []),
+        };
+      }
+      if (!targetVault) {
+        targetVault = createInitialVaultData();
+      }
+      const userDisplayName = googleUserRef.current?.displayName?.trim();
+      if (userDisplayName && targetVault.studentName === 'Personal Vault') {
+        targetVault = { ...targetVault, studentName: userDisplayName };
+      }
+
+      await persistEncryptedVault(targetVault, password, true, {
+        immediateCloud: true,
+      });
+      setVault(targetVault);
+      vaultRef.current = targetVault;
+      setActivePassphrase(password);
+      setIsLocked(false);
+      setShowHomeMenu(false);
+      setCloudSyncStatus(
+        'Inside menu password saved and encrypted vault synced to your Google account.',
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleUnlockWithGmailPassword = async (
+    password: string,
+  ): Promise<boolean> => {
+    const ok = pendingCloudRecord
+      ? await handleUnlockPendingCloudVault(password)
+      : await handleUnlockVault(password);
+    if (ok) {
+      setShowHomeMenu(false);
+    }
+    return ok;
+  };
+
+  const handleUnlockWithVaultKey = async (vaultKey: string): Promise<boolean> => {
+    const ok = await handleUnlockVault(vaultKey);
+    if (ok) {
+      setShowHomeMenu(false);
+    }
+    return ok;
+  };
+
+  const handleOpenLocalWorkspace = async () => {
+    if (vaultRef.current && !isLocked) {
+      setShowHomeMenu(false);
+      return;
+    }
+    if (envelope && !envelope.hasCustomPassphrase) {
+      const ok = await handleUnlockVault(DEFAULT_VAULT_PASSPHRASE);
+      if (ok) {
+        setShowHomeMenu(false);
+        return;
+      }
+    }
+    const clean = createInitialVaultData();
+    await persistEncryptedVault(clean, DEFAULT_VAULT_PASSPHRASE, false, {
+      skipCloudSync: true,
+    });
+    setVault(clean);
+    vaultRef.current = clean;
+    setActivePassphrase(DEFAULT_VAULT_PASSPHRASE);
+    setIsLocked(false);
+    setShowHomeMenu(false);
   };
 
   const handleWipeAllData = async () => {
@@ -945,6 +1035,7 @@ export default function App() {
     setActivePassphrase(input.passphrase);
     setPendingCloudRecord(null);
     setIsLocked(false);
+    setShowHomeMenu(false);
 
     if (input.startBlank) {
       setSelectedMonth(CURRENT_MONTH);
@@ -978,8 +1069,11 @@ export default function App() {
     passphrase: string,
   ): Promise<boolean> => {
     const ok = await applyDecryptedVault(backupEnvelope, passphrase);
-    if (ok && googleUserRef.current) {
-      scheduleCloudAutoPush(googleUserRef.current.uid, backupEnvelope, true);
+    if (ok) {
+      setShowHomeMenu(false);
+      if (googleUserRef.current) {
+        scheduleCloudAutoPush(googleUserRef.current.uid, backupEnvelope, true);
+      }
     }
     return ok;
   };
@@ -1609,6 +1703,44 @@ export default function App() {
     return () => window.clearInterval(timer);
   }, [vault, isLocked, nightlySummary, updateVault]);
 
+  if (showHomeMenu) {
+    return (
+      <>
+        <HomeMenuView
+          googleUser={googleUser}
+          hasLocalCustomKey={Boolean(envelope?.hasCustomPassphrase)}
+          hasCloudCustomVault={Boolean(pendingCloudRecord)}
+          isVaultUnlockedInSession={Boolean(vault) && !isLocked}
+          isBootstrapping={isBootstrapping}
+          isSigningInGoogle={isSigningInGoogle}
+          isRedirectingGoogle={isRedirectingGoogle}
+          showRedirectFallback={showRedirectFallback}
+          cloudStatus={cloudSyncStatus}
+          onGoogleSignIn={handleGoogleBasicSignIn}
+          onGoogleRedirectSignIn={handleGoogleBasicRedirectSignIn}
+          onCancelGoogleSignIn={handleCancelGoogleSignIn}
+          onGoogleSignOut={handleGoogleSignOut}
+          onCreateGmailInsidePassword={handleCreateGmailInsidePassword}
+          onUnlockWithGmailPassword={handleUnlockWithGmailPassword}
+          onUnlockWithVaultKey={handleUnlockWithVaultKey}
+          onOpenLocalWorkspace={handleOpenLocalWorkspace}
+          onContinueToInsideMenu={() => setShowHomeMenu(false)}
+          onLockVault={handleLockVault}
+          onOpenCreateVault={(mode) => setCreateVaultModal({ open: true, mode })}
+        />
+        <CreateVaultModal
+          key={`${createVaultModal.open}-${createVaultModal.mode}`}
+          isOpen={createVaultModal.open}
+          initialMode={createVaultModal.mode}
+          onClose={() => setCreateVaultModal((p) => ({ ...p, open: false }))}
+          onCreateVault={handleCreatePersonalVault}
+          onImportBackup={handleImportBackup}
+        />
+        <OfflineIndicator />
+      </>
+    );
+  }
+
   if (isBootstrapping) {
     return <VaultBootstrapSkeleton statusText="Decrypting AES-256-GCM vault..." />;
   }
@@ -1661,6 +1793,10 @@ export default function App() {
         activeSection={activeSection}
         onNavigate={(section) => {
           setActiveSection(section);
+          window.scrollTo({ top: 0, behavior: 'auto' });
+        }}
+        onGoHome={() => {
+          setShowHomeMenu(true);
           window.scrollTo({ top: 0, behavior: 'auto' });
         }}
         displayName={vault.studentName}
