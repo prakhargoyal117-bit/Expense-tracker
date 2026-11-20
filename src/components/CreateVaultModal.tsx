@@ -108,7 +108,7 @@ export function CreateVaultModal({
         !json.ciphertextBase64
       ) {
         setImportError(
-          'Invalid vault backup file. Select a .json file exported from CampusLedger.',
+          'Invalid vault backup file. Select a .json file exported from SpendVault.',
         );
         setParsedEnvelope(null);
         return;
@@ -232,7 +232,7 @@ export function CreateVaultModal({
                   type="text"
                   value={studentName}
                   onChange={(e) => setStudentName(e.target.value)}
-                  placeholder="e.g., Prakhar Goyal"
+                  placeholder="e.g., Ananya Verma"
                   className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700"
                 />
               </div>
@@ -364,7 +364,7 @@ export function CreateVaultModal({
                   {fileName ? `Selected: ${fileName}` : 'Choose .json vault backup file'}
                 </span>
                 <span className="text-[11px] text-slate-500">
-                  AES-256-GCM envelope exported from CampusLedger
+                  AES-256-GCM envelope exported from SpendVault
                 </span>
                 <input
                   id="backup-file-input"

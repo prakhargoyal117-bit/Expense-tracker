@@ -68,6 +68,8 @@ interface AppsAndSecurityViewProps {
   onExportEncryptedBackup: () => void;
   onWipeAllData: () => Promise<void>;
   onOpenCreateVault: (mode: 'create' | 'import') => void;
+  onGoogleBasicSignIn: () => Promise<void>;
+  onGoogleBasicRedirectSignIn: () => Promise<void>;
   onGoogleSignIn: (scanScope?: GmailScanScope) => Promise<void>;
   onGoogleRedirectSignIn: () => Promise<void>;
   onCancelGoogleSignIn: () => void;
@@ -116,6 +118,8 @@ export function AppsAndSecurityView({
   onExportEncryptedBackup,
   onWipeAllData,
   onOpenCreateVault,
+  onGoogleBasicSignIn,
+  onGoogleBasicRedirectSignIn,
   onGoogleSignIn,
   onGoogleRedirectSignIn,
   onCancelGoogleSignIn,
@@ -223,14 +227,14 @@ export function AppsAndSecurityView({
 
   return (
     <div className="space-y-8">
-      {/* Section 1: Real Personal Data Connectors (Gmail Receipt Sync + CSV Import) */}
+      {/* Section 1: Real Personal Data Connectors (Payment/IRCTC Receipt Reader, CSV & Optional Gmail) */}
       <section aria-label="Personal Receipt and Statement Sync" className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">
-            Personal Receipt Sync & Statement Import
+            Receipt Reader, Statement Import &amp; Optional Gmail Scan
           </h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Connect your personal Gmail account (read-only) to scan Zomato, Swiggy, EatSure, Amazon, Flipkart, Blinkit, Uber, or any online payment app receipts locally, or paste/import receipts directly.
+            Paste IRCTC ticket SMS or online payment app receipts (works immediately for everyone), upload CSV statements, or optionally connect read-only Gmail scanning.
           </p>
         </div>
 
@@ -245,12 +249,12 @@ export function AppsAndSecurityView({
                   </span>
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900">
-                      Gmail Order &amp; Payment-App Scanner
+                      Gmail Order &amp; IRCTC Scanner (Optional)
                     </h3>
                     <p className="text-xs text-slate-500">
                       {googleUser
                         ? `Signed in as ${googleUser.email}`
-                        : 'Reads only matching order or payment receipt emails'}
+                        : 'Optional read-only inbox scan for IRCTC, EatSure, Zomato, Swiggy & UPI'}
                     </p>
                   </div>
                 </div>
@@ -261,10 +265,10 @@ export function AppsAndSecurityView({
                 )}
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Emails are filtered and parsed inside your browser—OTPs, promos, and non-receipt mails are skipped automatically, and totals are encrypted before saving.
+                Emails are filtered and parsed inside your browser—OTPs, promos, and non-receipt mails are skipped automatically. Prefer not to grant Gmail scope? Use the instant IRCTC &amp; Payment Receipt Reader or CSV import instead.
                 {googleUser && !hasGmailToken && (
                   <span className="block mt-1 text-slate-500">
-                    Your saved expenses stay synced in your vault. Click &ldquo;Reconnect Gmail Scan&rdquo; only when you want to scan newly arrived emails (Google expires browser Gmail tokens after reload).
+                    Your account is already signed in for Cloud Vault Sync. Click &ldquo;Connect Gmail Auto-Scan&rdquo; only if you want inbox scanning.
                   </span>
                 )}
               </p>
@@ -358,8 +362,8 @@ export function AppsAndSecurityView({
                         : isSigningInGoogle
                           ? 'Waiting for Google Sign-In...'
                           : googleUser
-                            ? 'Reconnect Gmail Scan'
-                            : 'Sign in with Google for Gmail'
+                            ? 'Connect Gmail Auto-Scan'
+                            : 'Connect Gmail Auto-Scan'
                     }
                   />
                   {isSigningInGoogle && (
@@ -461,10 +465,10 @@ export function AppsAndSecurityView({
               </span>
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">
-                  Online Payment App Receipt Reader (GPay, PhonePe, Paytm, BHIM, CRED &amp; UPI)
+                  IRCTC &amp; Online Payment App Receipt Reader (GPay, PhonePe, Paytm, BHIM, CRED, IRCTC)
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Paste payment alerts or email/SMS receipts below. Only outgoing payment receipts are read—OTPs, promos, and money-received credits are ignored automatically.
+                  Paste IRCTC e-ticket SMS alerts or UPI payment receipts below. Only outgoing payments and rail bookings are read—OTPs, promos, and money-received credits are ignored automatically.
                 </p>
               </div>
             </div>
@@ -475,14 +479,15 @@ export function AppsAndSecurityView({
               htmlFor="payment-receipt-paste"
               className="block text-xs font-medium text-slate-700 mb-1.5"
             >
-              Paste Payment Receipts (one per line or separated by blank lines)
+              Paste Payment or IRCTC Ticket Receipts (one per line or separated by blank lines)
             </label>
             <textarea
               id="payment-receipt-paste"
+              data-testid="payment-receipt-textarea"
               rows={3}
               value={paymentReceiptInput}
               onChange={(e) => setPaymentReceiptInput(e.target.value)}
-              placeholder={'Example:\nPhonePe: Paid ₹240.00 to North Gate Xerox via UPI Ref 43298122\nYou paid ₹150 to Sharma Tea Stall using Google Pay'}
+              placeholder={'Example:\nIRCTC: Ticket booked PNR:4215893210 TRN:12952 NDLS-MMCT Fare:Rs.1845.00\nPhonePe: Paid ₹240.00 to EatSure Biryani via UPI Ref 43298122'}
               className="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700"
             />
           </div>
@@ -490,6 +495,7 @@ export function AppsAndSecurityView({
           {paymentReceiptNotice && (
             <p
               role="status"
+              data-testid="payment-receipt-notice"
               className="text-xs font-medium text-teal-900 bg-teal-50 border border-teal-200 rounded-lg px-3 py-2"
             >
               {paymentReceiptNotice}
@@ -498,7 +504,7 @@ export function AppsAndSecurityView({
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
             <span className="text-[11px] text-slate-500">
-              Supports Google Pay, PhonePe, Paytm, BHIM, CRED, Amazon Pay, Razorpay &amp; bank UPI debit receipts.
+              Supports IRCTC e-tickets (PNR &amp; Train No.), Google Pay, PhonePe, Paytm, BHIM, CRED, Amazon Pay, Razorpay &amp; bank UPI debit receipts.
             </span>
             <button
               type="button"
@@ -538,7 +544,7 @@ export function AppsAndSecurityView({
               Connected Apps & Account Permissions
             </h2>
             <p className="text-sm text-slate-500 mt-0.5">
-              Explicit account consent is required before reading order insights from any shopping or food app.
+              Explicit account consent is required before tracking insights from any shopping, food, or travel app.
             </p>
           </div>
           <span className="text-xs font-mono tabular-nums text-slate-600">
@@ -938,12 +944,12 @@ export function AppsAndSecurityView({
             {!googleUser ? (
               <div className="py-4 space-y-3 border-t border-slate-100">
                 <p className="text-xs text-slate-600">
-                  Sign in with your Google account to sync your encrypted vault across devices and restore it anywhere using your passphrase.
+                  <strong>Open to every Google user:</strong> Sign in with any Google account to sync your encrypted vault across Brave, Chrome, and mobile (no restricted Gmail permissions required).
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <GoogleSignInButton
                     disabled={isSigningInGoogle || isRedirectingGoogle}
-                    onClick={() => void onGoogleSignIn(gmailScanScope)}
+                    onClick={() => void onGoogleBasicSignIn()}
                     label={
                       isRedirectingGoogle
                         ? 'Redirecting to Google...'
@@ -956,7 +962,7 @@ export function AppsAndSecurityView({
                     <button
                       type="button"
                       disabled={isRedirectingGoogle}
-                      onClick={() => void onGoogleRedirectSignIn()}
+                      onClick={() => void onGoogleBasicRedirectSignIn()}
                       className="px-3 py-2 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-50 rounded-lg transition-colors"
                     >
                       {isRedirectingGoogle
@@ -1142,7 +1148,7 @@ export function AppsAndSecurityView({
                   htmlFor="monthly-budget-input"
                   className="block text-xs font-medium text-slate-700 mb-1"
                 >
-                  Monthly Student Budget (INR)
+                  Monthly Spend Budget (INR)
                 </label>
                 <input
                   id="monthly-budget-input"
@@ -1318,7 +1324,7 @@ export function AppsAndSecurityView({
                 Install as Mobile App (No APK Needed)
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Launch CampusLedger full-screen from your phone home screen and track cash or encrypted local expenses offline.
+                Launch SpendVault full-screen from your phone home screen and track cash, IRCTC tickets, or encrypted local expenses offline.
               </p>
             </div>
           </div>

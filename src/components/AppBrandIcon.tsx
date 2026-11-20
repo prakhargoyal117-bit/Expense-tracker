@@ -6,6 +6,7 @@ interface AppBrandIconProps {
 }
 
 const APP_BADGE_MAP: Record<AppId, { short: string; bg: string; fg: string }> = {
+  irctc: { short: 'IR', bg: '#1D4ED8', fg: '#FFFFFF' },
   zomato: { short: 'Z', bg: '#E23744', fg: '#FFFFFF' },
   swiggy: { short: 'S', bg: '#FC8019', fg: '#FFFFFF' },
   eatsure: { short: 'ES', bg: '#EA580C', fg: '#FFFFFF' },

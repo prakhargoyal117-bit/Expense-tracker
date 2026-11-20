@@ -65,7 +65,7 @@ export function PWAInstallButton({
                   id="pwa-install-guide-title"
                   className="text-base font-semibold text-slate-900"
                 >
-                  Install CampusLedger on Your Phone
+                  Install SpendVault on Your Phone
                 </h3>
                 <button
                   type="button"
@@ -99,7 +99,7 @@ export function PWAInstallButton({
                     <strong>Install app</strong> or <strong>Add to Home screen</strong>.
                   </li>
                   <li>
-                    CampusLedger will appear on your home screen with its own icon and launch full-screen without an APK.
+                    SpendVault will appear on your home screen with its own icon and launch full-screen without an APK.
                   </li>
                 </ol>
               )}

@@ -33,16 +33,23 @@ export const auth = getAuth(app);
 export interface GoogleSignInOptions {
   forceConsent?: boolean;
   loginHint?: string | null;
+  includeGmailScope?: boolean;
 }
+
+const REDIRECT_INTENT_KEY = 'spendvault_redirect_intent';
 
 function buildGoogleProvider(options?: GoogleSignInOptions): GoogleAuthProvider {
   const googleProvider = new GoogleAuthProvider();
-  for (const scope of WORKSPACE_SCOPES) {
-    googleProvider.addScope(scope);
+  const includeGmail = Boolean(options?.includeGmailScope);
+  if (includeGmail) {
+    for (const scope of WORKSPACE_SCOPES) {
+      googleProvider.addScope(scope);
+    }
   }
-  const params: Record<string, string> = {
-    include_granted_scopes: 'true',
-  };
+  const params: Record<string, string> = {};
+  if (includeGmail) {
+    params.include_granted_scopes = 'true';
+  }
   if (options?.forceConsent) {
     params.prompt = 'consent select_account';
   } else if (options?.loginHint) {
@@ -141,6 +148,36 @@ export function initFirebaseAuth(
   });
 }
 
+// Standard Google Sign-In (NO restricted Gmail scopes — works for ANY Google user worldwide)
+export async function signInWithGoogleBasic(
+  options?: Omit<GoogleSignInOptions, 'includeGmailScope'>,
+): Promise<{
+  user: User;
+  accessToken: string | null;
+}> {
+  if (activeSignInPromise) {
+    return activeSignInPromise;
+  }
+
+  const googleProvider = buildGoogleProvider({
+    ...options,
+    includeGmailScope: false,
+  });
+  isSigningIn = true;
+  activeSignInPromise = (async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      return { user: result.user, accessToken: cachedGmailAccessToken };
+    } finally {
+      isSigningIn = false;
+      activeSignInPromise = null;
+    }
+  })();
+
+  return activeSignInPromise;
+}
+
+// Optional Gmail Read-Only OAuth upgrade for automatic inbox receipt scanning
 export async function signInWithGoogleForVaultAndGmail(
   options?: GoogleSignInOptions,
 ): Promise<{
@@ -151,13 +188,19 @@ export async function signInWithGoogleForVaultAndGmail(
     return activeSignInPromise;
   }
 
-  const googleProvider = buildGoogleProvider(options);
+  const includeGmail = options?.includeGmailScope ?? true;
+  const googleProvider = buildGoogleProvider({
+    ...options,
+    includeGmailScope: includeGmail,
+  });
   isSigningIn = true;
   activeSignInPromise = (async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      cachedGmailAccessToken = credential?.accessToken ?? null;
+      if (includeGmail) {
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        cachedGmailAccessToken = credential?.accessToken ?? null;
+      }
       return { user: result.user, accessToken: cachedGmailAccessToken };
     } finally {
       isSigningIn = false;
@@ -182,19 +225,42 @@ export async function signInWithGoogleRedirectFallback(
     );
   }
   resetPendingGoogleSignIn();
-  const googleProvider = buildGoogleProvider(options);
+  const includeGmail = Boolean(options?.includeGmailScope);
+  try {
+    sessionStorage.setItem(
+      REDIRECT_INTENT_KEY,
+      includeGmail ? 'gmail' : 'basic',
+    );
+  } catch {
+    // Ignore storage restriction
+  }
+  const googleProvider = buildGoogleProvider({
+    ...options,
+    includeGmailScope: includeGmail,
+  });
   await signInWithRedirect(auth, googleProvider);
 }
 
 export async function consumeGoogleRedirectResult(): Promise<{
   user: User;
   accessToken: string | null;
+  intent: 'basic' | 'gmail';
 } | null> {
   const result = await getRedirectResult(auth);
   if (!result) return null;
-  const credential = GoogleAuthProvider.credentialFromResult(result);
-  cachedGmailAccessToken = credential?.accessToken ?? null;
-  return { user: result.user, accessToken: cachedGmailAccessToken };
+  let intent: 'basic' | 'gmail' = 'basic';
+  try {
+    const stored = sessionStorage.getItem(REDIRECT_INTENT_KEY);
+    if (stored === 'gmail') intent = 'gmail';
+    sessionStorage.removeItem(REDIRECT_INTENT_KEY);
+  } catch {
+    // Ignore storage restriction
+  }
+  if (intent === 'gmail') {
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    cachedGmailAccessToken = credential?.accessToken ?? null;
+  }
+  return { user: result.user, accessToken: cachedGmailAccessToken, intent };
 }
 
 export function getInMemoryGmailToken(): string | null {

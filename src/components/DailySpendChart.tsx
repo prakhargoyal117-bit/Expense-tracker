@@ -125,9 +125,9 @@ export function DailySpendChart({
                     aria-pressed={isSelected}
                     className={`group relative flex-1 h-full flex flex-col justify-end items-center rounded-t transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 ${
                       isSelected
-                        ? 'bg-teal-50/80 ring-1 ring-teal-700/30'
+                        ? 'bg-slate-100/75 border-b-2 border-teal-700'
                         : isHovered
-                          ? 'bg-slate-100/70'
+                          ? 'bg-slate-100/60'
                           : 'hover:bg-slate-50'
                     }`}
                   >

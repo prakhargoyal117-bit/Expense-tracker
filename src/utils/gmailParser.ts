@@ -26,6 +26,18 @@ interface AppMatcher {
 
 const APP_MATCHERS: AppMatcher[] = [
   {
+    appId: 'irctc',
+    category: ExpenseCategory.TRANSPORT,
+    displayName: 'IRCTC',
+    patterns: [
+      /\birctc\b/i,
+      /indian\s*railways/i,
+      /ticketadmin@irctc/i,
+      /\be-?ticket\b.*\bpnr\b/i,
+      /\bpnr\s*[:#\-]?\s*\d{10}\b/i,
+    ],
+  },
+  {
     appId: 'zomato',
     category: ExpenseCategory.FOOD,
     displayName: 'Zomato',
@@ -98,9 +110,9 @@ export function matchAppFromEmail(from: string, subject: string, text: string): 
 }
 
 export function extractAmountINR(text: string): number | null {
-  // Prioritize explicit total labels first, then currency markers
+  // Prioritize explicit total or ticket fare labels first, then currency markers
   const priorityPatterns = [
-    /(?:grand\s*total|order\s*total|total\s*paid|amount\s*paid|total\s*amount|bill\s*total|paid)\s*[:\-]?\s*(?:₹|rs\.?|inr)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i,
+    /(?:grand\s*total|order\s*total|total\s*paid|amount\s*paid|total\s*amount|bill\s*total|ticket\s*fare|total\s*fare|fare|paid)\s*[:\-]?\s*(?:₹|rs\.?|inr)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i,
     /(?:₹|rs\.?|inr)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/gi,
   ];
 
@@ -162,15 +174,28 @@ export function formatEmailDateTime(
   };
 }
 
+export function extractIrctcDetails(text: string): {
+  pnr: string | null;
+  trainNo: string | null;
+} {
+  const pnrMatch = /\bpnr\s*(?:no\.?|number)?\s*[:#\-]?\s*(\d{10})\b/i.exec(text);
+  const trainMatch =
+    /\b(?:trn|train(?:\s*no\.?|\s*number)?)\s*[:#\-]?\s*(\d{5})\b/i.exec(text);
+  return {
+    pnr: pnrMatch?.[1] ?? null,
+    trainNo: trainMatch?.[1] ?? null,
+  };
+}
+
 export function parseGmailReceiptMessage(msg: GmailRawMessage): ExpenseEntry | null {
   const from = msg.headers.from ?? '';
   const subject = msg.headers.subject ?? '';
   const body = msg.bodyText ?? msg.snippet ?? '';
   const fullText = `${subject}\n${msg.snippet ?? ''}\n${body}`;
 
-  // Filter out promo/marketing emails without order/receipt keywords
+  // Filter out promo/marketing emails without order/receipt/ticket keywords
   const looksLikeReceipt =
-    /\b(order|receipt|invoice|delivered|trip|booking|confirmed|payment|bill|summary)\b/i.test(
+    /\b(order|receipt|invoice|delivered|trip|booking|booked|ticket|e-?ticket|pnr|fare|confirmed|payment|bill|summary)\b/i.test(
       fullText,
     );
   if (!looksLikeReceipt) return null;
@@ -189,9 +214,25 @@ export function parseGmailReceiptMessage(msg: GmailRawMessage): ExpenseEntry | n
     .trim()
     .slice(0, 70);
 
-  const merchant = cleanSubject
+  let merchant = cleanSubject
     ? `${matcher.displayName} · ${cleanSubject}`
     : `${matcher.displayName} Order`;
+
+  let notes = 'Imported from Gmail receipt';
+  if (matcher.appId === 'irctc') {
+    const { pnr, trainNo } = extractIrctcDetails(fullText);
+    const metaParts = [
+      pnr ? `PNR ${pnr}` : null,
+      trainNo ? `Train ${trainNo}` : null,
+    ].filter(Boolean);
+    if (!cleanSubject) {
+      merchant = trainNo ? `IRCTC Train ${trainNo}` : 'IRCTC Rail Ticket';
+    }
+    notes =
+      metaParts.length > 0
+        ? `IRCTC e-ticket · ${metaParts.join(' · ')}`
+        : 'Imported from IRCTC ticket receipt';
+  }
 
   return {
     id: `gmail-${msg.id}`,
@@ -203,7 +244,7 @@ export function parseGmailReceiptMessage(msg: GmailRawMessage): ExpenseEntry | n
     category: matcher.category,
     appId: matcher.appId,
     source: 'app_sync',
-    notes: 'Imported from Gmail receipt',
+    notes,
   };
 }
 
@@ -407,22 +448,22 @@ export function parseOnlinePaymentReceipt(
     return null;
   }
 
-  // Must confirm an outgoing payment / receipt
+  // Must confirm an outgoing payment / receipt / IRCTC ticket booking
+  const isIrctcTicket =
+    /\b(irctc|indian\s*railways)\b/i.test(fullText) ||
+    /\bpnr\s*[:#\-]?\s*\d{10}\b/i.test(fullText);
+
   const hasPaymentConfirmation =
-    /\b(paid|debited|payment\s*(?:of|to|successful|success|confirmed|completed|receipt)|sent\s*(?:to|₹|rs\.?|inr)|upi\s*(?:ref|txn|transaction)|transaction\s*(?:id|ref|successful)|bill\s*paid|order\s*paid|receipt)\b/i.test(
+    /\b(paid|debited|payment\s*(?:of|to|successful|success|confirmed|completed|receipt)|sent\s*(?:to|₹|rs\.?|inr)|upi\s*(?:ref|txn|transaction)|transaction\s*(?:id|ref|successful)|bill\s*paid|order\s*paid|receipt|ticket\s*booked|e-?ticket|fare|booked)\b/i.test(
       fullText,
     );
   if (!hasPaymentConfirmation) return null;
 
   const paymentAppName = detectOnlinePaymentApp(from, subject, fullText);
-  if (!paymentAppName) return null;
+  if (!paymentAppName && !isIrctcTicket) return null;
 
   const amount = extractAmountINR(fullText);
   if (!amount) return null;
-
-  const payee = extractPayeeName(fullText, paymentAppName);
-  const matchedMerchantApp = matchAppFromEmail('', payee, payee);
-  const upiRef = extractUpiRef(fullText);
 
   let date: string;
   let time: string;
@@ -436,9 +477,45 @@ export function parseOnlinePaymentReceipt(
     time = '18:00';
   }
 
-  const merchantLabel = payee.toLowerCase().includes(paymentAppName.toLowerCase())
+  if (isIrctcTicket) {
+    const { pnr, trainNo } = extractIrctcDetails(fullText);
+    const upiRef = extractUpiRef(fullText);
+    const metaParts = [
+      pnr ? `PNR ${pnr}` : null,
+      trainNo ? `Train ${trainNo}` : null,
+      paymentAppName ? `via ${paymentAppName}` : null,
+      upiRef ? `Ref ${upiRef}` : null,
+    ].filter(Boolean);
+
+    const merchantLabel = trainNo
+      ? `IRCTC Train ${trainNo}${paymentAppName ? ` (${paymentAppName})` : ''}`
+      : `IRCTC Rail Ticket${paymentAppName ? ` (${paymentAppName})` : ''}`;
+
+    return {
+      id: msg.id.startsWith('gmail-') || msg.id.startsWith('pay-') ? msg.id : `pay-${msg.id}`,
+      merchant: merchantLabel.slice(0, 90),
+      amount,
+      date,
+      time,
+      mode: PaymentMode.ONLINE,
+      category: ExpenseCategory.TRANSPORT,
+      appId: 'irctc',
+      source: 'app_sync',
+      notes:
+        metaParts.length > 0
+          ? `IRCTC e-ticket · ${metaParts.join(' · ')}`
+          : 'IRCTC e-ticket receipt',
+    };
+  }
+
+  const effectivePaymentApp = paymentAppName!;
+  const payee = extractPayeeName(fullText, effectivePaymentApp);
+  const matchedMerchantApp = matchAppFromEmail('', payee, payee);
+  const upiRef = extractUpiRef(fullText);
+
+  const merchantLabel = payee.toLowerCase().includes(effectivePaymentApp.toLowerCase())
     ? payee
-    : `${payee} (${paymentAppName})`;
+    : `${payee} (${effectivePaymentApp})`;
 
   return {
     id: msg.id.startsWith('gmail-') || msg.id.startsWith('pay-') ? msg.id : `pay-${msg.id}`,
@@ -451,8 +528,8 @@ export function parseOnlinePaymentReceipt(
     appId: matchedMerchantApp?.appId ?? 'upi_payment',
     source: 'app_sync',
     notes: upiRef
-      ? `${paymentAppName} payment receipt · Ref ${upiRef}`
-      : `${paymentAppName} payment receipt`,
+      ? `${effectivePaymentApp} payment receipt · Ref ${upiRef}`
+      : `${effectivePaymentApp} payment receipt`,
   };
 }
 

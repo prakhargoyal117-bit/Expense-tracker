@@ -74,7 +74,7 @@ export function VaultLockScreen({
             <h1 className="text-xl font-bold text-slate-900">
               {cloudVaultAvailable
                 ? 'Unlock Cloud Synced Vault'
-                : 'CampusLedger Vault Locked'}
+                : 'SpendVault Locked'}
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
               Encrypted with {envelope?.algorithm ?? 'AES-256-GCM'} ·{' '}
@@ -86,7 +86,7 @@ export function VaultLockScreen({
         <p className="text-sm text-slate-600 leading-relaxed">
           {cloudVaultAvailable
             ? `Found your encrypted cloud vault for ${googleUser?.email ?? 'your Google account'}. Enter your vault passphrase to open it in this browser.`
-            : 'All connected app insights, cash logs, and daily summaries remain encrypted. Enter your vault passphrase to derive the decryption key in memory.'}
+            : 'All connected app insights, IRCTC tickets, cash logs, and daily summaries remain encrypted. Enter your vault passphrase to unlock.'}
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">

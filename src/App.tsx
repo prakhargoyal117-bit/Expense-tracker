@@ -8,6 +8,8 @@ import {
   type ExpenseEntry,
   type ExpenseFilters,
   type ManualExpenseInput,
+  type ProfileUpdateInput,
+  type RecurringExpense,
   type ReminderPreferences,
   type VaultData,
 } from './types/expense';
@@ -58,6 +60,10 @@ import {
   shouldForceGmailConsent,
 } from './utils/vaultSync';
 import {
+  buildExpenseFromRecurring,
+  computeRecurringSummary,
+} from './utils/recurring';
+import {
   type CloudVaultRecord,
   clearInMemoryGmailToken,
   consumeGoogleRedirectResult,
@@ -67,6 +73,7 @@ import {
   initFirebaseAuth,
   resetPendingGoogleSignIn,
   saveCloudEncryptedVault,
+  signInWithGoogleBasic,
   signInWithGoogleForVaultAndGmail,
   signInWithGoogleRedirectFallback,
   signOutGoogle,
@@ -82,6 +89,7 @@ import { OverviewView } from './components/OverviewView';
 import { AppInsightsView } from './components/AppInsightsView';
 import { TransactionsView } from './components/TransactionsView';
 import { AppsAndSecurityView } from './components/AppsAndSecurityView';
+import { ProfileView } from './components/ProfileView';
 import { AddExpenseModal } from './components/AddExpenseModal';
 import { EditExpenseModal } from './components/EditExpenseModal';
 import { PermissionConsentModal } from './components/PermissionConsentModal';
@@ -101,7 +109,8 @@ const SECTION_TITLES: Record<NavSection, string> = {
   overview: 'Overview',
   insights: 'App Insights',
   transactions: 'Transactions',
-  security: 'Apps & Security',
+  security: 'Apps & Sync',
+  profile: 'Profile & Bills',
 };
 
 export default function App() {
@@ -120,6 +129,7 @@ export default function App() {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
 
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState<boolean>(false);
+  const [addExpensePreset, setAddExpensePreset] = useState<'default' | 'irctc'>('default');
   const [editingExpense, setEditingExpense] = useState<ExpenseEntry | null>(null);
   const [showNightlyCheckIn, setShowNightlyCheckIn] = useState<boolean>(false);
   const [pendingConsentApp, setPendingConsentApp] =
@@ -389,17 +399,21 @@ export default function App() {
         setGoogleUser(res.user);
         googleUserRef.current = res.user;
         setHasGmailToken(Boolean(res.accessToken));
-        setActiveSection('security');
         setShowRedirectFallback(false);
         reconciledUidRef.current = res.user.uid;
         void reconcileWithCloudVault(res.user);
-        if (res.accessToken) {
-          gmailMissingScopeRef.current = false;
-          setPendingRedirectScan(true);
+        if (res.intent === 'gmail') {
+          setActiveSection('security');
+          if (res.accessToken) {
+            gmailMissingScopeRef.current = false;
+            setPendingRedirectScan(true);
+          } else {
+            gmailMissingScopeRef.current = true;
+            const missingMsg = `Signed in as ${res.user.email}, but Gmail read-only permission was not checked on the Google consent screen. You can still use Cloud Vault Sync and the IRCTC & Payment Receipt Reader.`;
+            setGmailStatus({ type: 'error', text: missingMsg });
+          }
         } else {
-          gmailMissingScopeRef.current = true;
-          const missingMsg = `Signed in as ${res.user.email}, but Gmail read-only permission was not checked on the Google consent screen. Click "Reconnect Gmail Scan" and allow Gmail access.`;
-          setGmailStatus({ type: 'error', text: missingMsg });
+          setCloudSyncStatus(`Signed in as ${res.user.email}. Syncing encrypted vault...`);
         }
       })
       .catch((err) => {
@@ -748,6 +762,56 @@ export default function App() {
     }));
   };
 
+  const handleSaveProfile = (input: ProfileUpdateInput) => {
+    updateVault((prev) => ({
+      ...prev,
+      studentName: input.displayName,
+      campusName: input.profileLabel,
+      monthlyBudget: input.monthlyBudget,
+      savingsGoal: input.savingsGoal,
+      avatarColor: input.avatarColor,
+    }));
+  };
+
+  const handleAddRecurring = (
+    bill: Omit<RecurringExpense, 'id' | 'lastLoggedMonth'>,
+  ) => {
+    const nextItem: RecurringExpense = {
+      ...bill,
+      id: `recbill-${Date.now()}`,
+      lastLoggedMonth: null,
+    };
+    updateVault((prev) => ({
+      ...prev,
+      recurringExpenses: [nextItem, ...(prev.recurringExpenses ?? [])],
+    }));
+  };
+
+  const handleLogRecurring = (bill: RecurringExpense) => {
+    const targetMonth =
+      selectedMonth === 'all' ? CURRENT_MONTH : selectedMonth;
+    const entry = buildExpenseFromRecurring(bill, targetMonth);
+    updateVault((prev) => ({
+      ...prev,
+      expenses: [entry, ...prev.expenses],
+      recurringExpenses: (prev.recurringExpenses ?? []).map((b) =>
+        b.id === bill.id ? { ...b, lastLoggedMonth: targetMonth } : b,
+      ),
+    }));
+  };
+
+  const handleDeleteRecurring = (id: string) => {
+    updateVault((prev) => ({
+      ...prev,
+      recurringExpenses: (prev.recurringExpenses ?? []).filter((b) => b.id !== id),
+    }));
+  };
+
+  const openAddExpenseModal = (preset: 'default' | 'irctc' = 'default') => {
+    setAddExpensePreset(preset);
+    setIsAddExpenseOpen(true);
+  };
+
   const handleSetPassphrase = async (newPassphrase: string) => {
     if (!vault) return;
     await persistEncryptedVault(vault, newPassphrase, true, {
@@ -1015,7 +1079,103 @@ export default function App() {
     }
   };
 
-  // Google Sign-In for Gmail + Cloud Vault Sync
+  // Universal Google Sign-In (NO restricted Gmail scopes — works for ANY Google user worldwide)
+  const handleGoogleBasicSignIn = async () => {
+    if (isSigningInGoogle || isRedirectingGoogle) return;
+    clearSignInTimers();
+    const attemptId = ++signInAttemptIdRef.current;
+
+    setIsSigningInGoogle(true);
+    setShowRedirectFallback(false);
+    setCloudSyncStatus('Opening Google Sign-In window...');
+
+    const ua =
+      typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
+
+    signInStallTimerRef.current = window.setTimeout(() => {
+      if (signInAttemptIdRef.current !== attemptId) return;
+      setShowRedirectFallback(true);
+      setCloudSyncStatus(getStallSignInNotice(ua));
+    }, GOOGLE_SIGNIN_STALL_MS);
+
+    signInTimeoutTimerRef.current = window.setTimeout(() => {
+      if (signInAttemptIdRef.current !== attemptId) return;
+      signInAttemptIdRef.current += 1;
+      clearSignInTimers();
+      resetPendingGoogleSignIn();
+      setIsSigningInGoogle(false);
+      setShowRedirectFallback(true);
+      setCloudSyncStatus(
+        'Google Sign-In window timed out without responding. Tap "Try Full-Page Redirect Sign-In" below, or allow popups for this site and try again.',
+      );
+    }, GOOGLE_SIGNIN_TIMEOUT_MS);
+
+    try {
+      const { user } = await signInWithGoogleBasic({
+        loginHint: googleUserRef.current?.email ?? undefined,
+      });
+      if (signInAttemptIdRef.current !== attemptId) return;
+      clearSignInTimers();
+      setGoogleUser(user);
+      googleUserRef.current = user;
+      setShowRedirectFallback(false);
+
+      // Personalize default profile name automatically on first sign-in
+      if (
+        user.displayName &&
+        vaultRef.current &&
+        (vaultRef.current.studentName === 'Personal Vault' ||
+          vaultRef.current.studentName === 'My Personal Vault')
+      ) {
+        updateVault((prev) => ({
+          ...prev,
+          studentName: user.displayName || prev.studentName,
+        }));
+      }
+
+      reconciledUidRef.current = user.uid;
+      await reconcileWithCloudVault(user);
+    } catch (err) {
+      if (signInAttemptIdRef.current !== attemptId) return;
+      clearSignInTimers();
+      const host =
+        typeof window !== 'undefined' ? window.location.hostname : undefined;
+      const msg = formatFirebaseAuthError(err, host, ua);
+      setShowRedirectFallback(shouldOfferRedirectFallback(err));
+      setCloudSyncStatus(msg);
+    } finally {
+      if (signInAttemptIdRef.current === attemptId) {
+        clearSignInTimers();
+        setIsSigningInGoogle(false);
+      }
+    }
+  };
+
+  const handleGoogleBasicRedirectSignIn = async () => {
+    if (isRedirectingGoogle) return;
+    signInAttemptIdRef.current += 1;
+    clearSignInTimers();
+    resetPendingGoogleSignIn();
+    setIsSigningInGoogle(false);
+    setIsRedirectingGoogle(true);
+    setCloudSyncStatus('Redirecting to Google Sign-In...');
+    try {
+      await signInWithGoogleRedirectFallback({
+        includeGmailScope: false,
+        loginHint: googleUserRef.current?.email ?? undefined,
+      });
+    } catch (err) {
+      const host =
+        typeof window !== 'undefined' ? window.location.hostname : undefined;
+      const ua =
+        typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
+      const msg = formatFirebaseAuthError(err, host, ua);
+      setCloudSyncStatus(msg);
+      setIsRedirectingGoogle(false);
+    }
+  };
+
+  // Optional Gmail Auto-Scan OAuth upgrade (separate from standard Google Sign-In)
   const handleGoogleSignIn = async (scanScope: GmailScanScope = 'all') => {
     if (isSigningInGoogle || isRedirectingGoogle) return;
     clearSignInTimers();
@@ -1025,9 +1185,8 @@ export default function App() {
     setShowRedirectFallback(false);
     setGmailStatus({
       type: 'info',
-      text: 'Opening Google Sign-In window...',
+      text: 'Opening Google consent window for optional Gmail receipt scan...',
     });
-    setCloudSyncStatus(null);
     setAppSyncStatus(null);
 
     const ua =
@@ -1052,7 +1211,6 @@ export default function App() {
       const timeoutMsg =
         'Google Sign-In window timed out without responding. Tap "Try Full-Page Redirect Sign-In Instead" below, or allow popups for this site and try again.';
       setGmailStatus({ type: 'error', text: timeoutMsg });
-      setCloudSyncStatus(timeoutMsg);
     }, GOOGLE_SIGNIN_TIMEOUT_MS);
 
     try {
@@ -1061,6 +1219,7 @@ export default function App() {
       });
       const { user, accessToken } = await signInWithGoogleForVaultAndGmail({
         forceConsent,
+        includeGmailScope: true,
         loginHint: googleUserRef.current?.email ?? undefined,
       });
       if (signInAttemptIdRef.current !== attemptId) return;
@@ -1080,7 +1239,7 @@ export default function App() {
         }
       } else {
         gmailMissingScopeRef.current = true;
-        const missingMsg = `Signed in as ${user.email}, but Gmail read-only permission was not granted. Click "Reconnect Gmail Scan" and check the Gmail access box.`;
+        const missingMsg = `Signed in as ${user.email}, but Gmail read-only permission was not granted. Your Cloud Vault Sync still works—use the IRCTC & Payment Receipt Reader or try Connect Gmail Auto-Scan again.`;
         setGmailStatus({ type: 'error', text: missingMsg });
       }
     } catch (err) {
@@ -1091,7 +1250,6 @@ export default function App() {
       const msg = formatFirebaseAuthError(err, host, ua);
       setShowRedirectFallback(shouldOfferRedirectFallback(err));
       setGmailStatus({ type: 'error', text: msg });
-      setCloudSyncStatus(msg);
     } finally {
       if (signInAttemptIdRef.current === attemptId) {
         clearSignInTimers();
@@ -1111,6 +1269,7 @@ export default function App() {
       type: 'info',
       text: 'Google Sign-In canceled. You can retry the popup or use "Try Full-Page Redirect Sign-In Instead" below.',
     });
+    setCloudSyncStatus('Google Sign-In canceled.');
   }, [clearSignInTimers]);
 
   const handleGoogleRedirectSignIn = async () => {
@@ -1126,6 +1285,7 @@ export default function App() {
     });
     try {
       await signInWithGoogleRedirectFallback({
+        includeGmailScope: true,
         forceConsent: gmailMissingScopeRef.current,
         loginHint: googleUserRef.current?.email ?? undefined,
       });
@@ -1136,7 +1296,6 @@ export default function App() {
         typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
       const msg = formatFirebaseAuthError(err, host, ua);
       setGmailStatus({ type: 'error', text: msg });
-      setCloudSyncStatus(msg);
       setIsRedirectingGoogle(false);
     }
   };
@@ -1288,7 +1447,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `campusledger-encrypted-vault-${TODAY_DATE}.json`;
+    link.download = `spendvault-encrypted-vault-${TODAY_DATE}.json`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -1300,7 +1459,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `campusledger-expenses-${selectedMonth}.csv`;
+    link.download = `spendvault-expenses-${selectedMonth}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -1403,7 +1562,7 @@ export default function App() {
         )}.`;
       }
       if (Notification.permission === 'denied') {
-        return 'Browser notification permission is blocked—in-app nightly check-in prompts will still appear when you open CampusLedger.';
+        return 'Browser notification permission is blocked—in-app nightly check-in prompts will still appear when you open SpendVault.';
       }
     }
     return `Nightly check-in enabled for ${formatTime12h(reminderSettings.nightlyTime)}.`;
@@ -1467,8 +1626,8 @@ export default function App() {
           cloudStatus={cloudSyncStatus}
           onUnlock={handleUnlockVault}
           onUnlockCloudVault={handleUnlockPendingCloudVault}
-          onGoogleSignIn={() => handleGoogleSignIn('all')}
-          onGoogleRedirectSignIn={handleGoogleRedirectSignIn}
+          onGoogleSignIn={handleGoogleBasicSignIn}
+          onGoogleRedirectSignIn={handleGoogleBasicRedirectSignIn}
           onCancelGoogleSignIn={handleCancelGoogleSignIn}
           onWipeAllData={handleWipeAllData}
           onOpenCreateVault={(mode) => setCreateVaultModal({ open: true, mode })}
@@ -1488,6 +1647,13 @@ export default function App() {
 
   const connectedCount = vault.apps.filter((a) => a.isConnected).length;
   const unconnectedApps = vault.apps.filter((a) => !a.isConnected);
+  const recurringExpenses = vault.recurringExpenses ?? [];
+  const effectiveMonthForRecurring =
+    selectedMonth === 'all' ? CURRENT_MONTH : selectedMonth;
+  const pendingRecurringCount = computeRecurringSummary(
+    recurringExpenses,
+    effectiveMonthForRecurring,
+  ).pendingCount;
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -1497,8 +1663,9 @@ export default function App() {
           setActiveSection(section);
           window.scrollTo({ top: 0, behavior: 'auto' });
         }}
-        studentName={vault.studentName}
-        campusName={vault.campusName}
+        displayName={vault.studentName}
+        profileLabel={vault.campusName}
+        avatarColor={vault.avatarColor ?? '#0F766E'}
         avatarUrl={googleUser?.photoURL ?? null}
         monthlySpend={summary.totalSpend}
         monthlyBudget={vault.monthlyBudget}
@@ -1521,7 +1688,7 @@ export default function App() {
             </button>
 
             <div className="flex items-center gap-2 text-sm min-w-0">
-              <span className="text-slate-400 hidden sm:inline">CampusLedger</span>
+              <span className="text-slate-400 hidden sm:inline">SpendVault</span>
               <span className="text-slate-300 hidden sm:inline" aria-hidden="true">
                 /
               </span>
@@ -1575,7 +1742,7 @@ export default function App() {
             </div>
             <button
               type="button"
-              onClick={() => setIsAddExpenseOpen(true)}
+              onClick={() => openAddExpenseModal('default')}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition-colors whitespace-nowrap shrink-0"
             >
               <Plus className="w-4 h-4" aria-hidden="true" />
@@ -1747,8 +1914,9 @@ export default function App() {
               appInsights={appInsights}
               categoryInsights={categoryInsights}
               recentExpenses={recentMonthExpenses}
+              pendingRecurringCount={pendingRecurringCount}
               onNavigate={setActiveSection}
-              onOpenAddExpense={() => setIsAddExpenseOpen(true)}
+              onOpenAddExpense={openAddExpenseModal}
               onEditExpense={(item) => setEditingExpense(item)}
               onFilterByApp={(appId) => {
                 setFilters((prev) => ({ ...prev, appId, month: selectedMonth }));
@@ -1781,7 +1949,7 @@ export default function App() {
               }
               onEditExpense={(item) => setEditingExpense(item)}
               onDeleteExpense={handleDeleteExpense}
-              onOpenAddExpense={() => setIsAddExpenseOpen(true)}
+              onOpenAddExpense={() => openAddExpenseModal('default')}
               onExportCsv={handleExportCsv}
               onImportCsvText={handleImportCsvText}
             />
@@ -1817,6 +1985,8 @@ export default function App() {
               onOpenCreateVault={(mode) =>
                 setCreateVaultModal({ open: true, mode })
               }
+              onGoogleBasicSignIn={handleGoogleBasicSignIn}
+              onGoogleBasicRedirectSignIn={handleGoogleBasicRedirectSignIn}
               onGoogleSignIn={handleGoogleSignIn}
               onGoogleRedirectSignIn={handleGoogleRedirectSignIn}
               onCancelGoogleSignIn={handleCancelGoogleSignIn}
@@ -1834,6 +2004,38 @@ export default function App() {
               onSendNightlyPreview={handleSendNightlyPreview}
             />
           )}
+
+          {activeSection === 'profile' && (
+            <ProfileView
+              displayName={vault.studentName}
+              profileLabel={vault.campusName}
+              monthlyBudget={vault.monthlyBudget}
+              savingsGoal={vault.savingsGoal ?? 5000}
+              avatarColor={vault.avatarColor ?? '#0F766E'}
+              monthlySpend={summary.totalSpend}
+              selectedMonth={selectedMonth}
+              apps={vault.apps}
+              recurringExpenses={recurringExpenses}
+              googleUser={googleUser}
+              isSigningInGoogle={isSigningInGoogle}
+              isRedirectingGoogle={isRedirectingGoogle}
+              showRedirectFallback={showRedirectFallback}
+              cloudSyncStatus={cloudSyncStatus}
+              lastCloudSyncAt={lastCloudSyncAt}
+              onSaveProfile={handleSaveProfile}
+              onAddRecurring={handleAddRecurring}
+              onLogRecurring={handleLogRecurring}
+              onDeleteRecurring={handleDeleteRecurring}
+              onGoogleBasicSignIn={handleGoogleBasicSignIn}
+              onGoogleBasicRedirectSignIn={handleGoogleBasicRedirectSignIn}
+              onCancelGoogleSignIn={handleCancelGoogleSignIn}
+              onGoogleSignOut={handleGoogleSignOut}
+              onLockVault={handleLockVault}
+              onOpenCreateVault={(mode) =>
+                setCreateVaultModal({ open: true, mode })
+              }
+            />
+          )}
         </main>
       </div>
 
@@ -1842,6 +2044,7 @@ export default function App() {
         isOpen={isAddExpenseOpen}
         apps={vault.apps}
         defaultDate={selectedDate}
+        initialPreset={addExpensePreset}
         onClose={() => setIsAddExpenseOpen(false)}
         onSubmitExpense={handleAddManualExpense}
       />

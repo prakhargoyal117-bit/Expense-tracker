@@ -17,6 +17,7 @@ interface AddExpenseModalProps {
   isOpen: boolean;
   apps: ConnectedApp[];
   defaultDate?: string;
+  initialPreset?: 'default' | 'irctc';
   onClose: () => void;
   onSubmitExpense: (input: ManualExpenseInput) => void;
 }
@@ -25,6 +26,7 @@ export function AddExpenseModal({
   isOpen,
   apps,
   defaultDate,
+  initialPreset = 'default',
   onClose,
   onSubmitExpense,
 }: AddExpenseModalProps) {
@@ -32,7 +34,7 @@ export function AddExpenseModal({
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(defaultDate || TODAY_DATE);
   const [time, setTime] = useState('14:00');
-  const [mode, setMode] = useState<PaymentMode>(PaymentMode.CASH);
+  const [mode, setMode] = useState<PaymentMode>(PaymentMode.ONLINE);
   const [category, setCategory] = useState<ExpenseCategory>(ExpenseCategory.FOOD);
   const [appId, setAppId] = useState<AppId>('manual');
   const [notes, setNotes] = useState('');
@@ -41,12 +43,48 @@ export function AddExpenseModal({
   const [totalBillInput, setTotalBillInput] = useState('');
   const [splitCountInput, setSplitCountInput] = useState('2');
 
+  const applyQuickTemplate = (
+    tpl: 'irctc' | 'food' | 'upi' | 'cash',
+  ) => {
+    setErrors({});
+    if (tpl === 'irctc') {
+      setAppId('irctc');
+      setCategory(ExpenseCategory.TRANSPORT);
+      setMode(PaymentMode.ONLINE);
+      if (!merchant.trim()) setMerchant('IRCTC Train Ticket');
+      if (!notes.trim()) setNotes('');
+    } else if (tpl === 'food') {
+      setAppId('zomato');
+      setCategory(ExpenseCategory.FOOD);
+      setMode(PaymentMode.ONLINE);
+    } else if (tpl === 'upi') {
+      setAppId('upi_payment');
+      setCategory(ExpenseCategory.OTHER);
+      setMode(PaymentMode.ONLINE);
+    } else {
+      setAppId('manual');
+      setCategory(ExpenseCategory.FOOD);
+      setMode(PaymentMode.CASH);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       setDate(defaultDate || TODAY_DATE);
       setErrors({});
+      if (initialPreset === 'irctc') {
+        setAppId('irctc');
+        setCategory(ExpenseCategory.TRANSPORT);
+        setMode(PaymentMode.ONLINE);
+        setMerchant('IRCTC Train Ticket');
+      } else {
+        setMerchant('');
+        setAppId('manual');
+        setMode(PaymentMode.ONLINE);
+        setCategory(ExpenseCategory.FOOD);
+      }
     }
-  }, [isOpen, defaultDate]);
+  }, [isOpen, defaultDate, initialPreset]);
 
   if (!isOpen) return null;
 
@@ -118,7 +156,7 @@ export function AddExpenseModal({
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between gap-4">
           <div>
             <h2 id="add-expense-title" className="text-base font-semibold text-slate-900">
-              Add Manual Expenditure
+              {appId === 'irctc' ? 'Log IRCTC Train Ticket' : 'Add Expense'}
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Encrypted locally with AES-256-GCM before saving to your vault.
@@ -135,13 +173,53 @@ export function AddExpenseModal({
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="p-6 space-y-4 max-h-[82vh] overflow-y-auto">
+          {/* One-Tap Quick Templates */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-medium text-slate-500 mr-1">
+              Quick fill:
+            </span>
+            {(
+              [
+                { id: 'irctc', label: 'IRCTC Ticket' },
+                { id: 'food', label: 'Food App' },
+                { id: 'upi', label: 'UPI Payment' },
+                { id: 'cash', label: 'Cash Spend' },
+              ] as const
+            ).map((tpl) => {
+              const isSelected =
+                (tpl.id === 'irctc' && appId === 'irctc') ||
+                (tpl.id === 'food' &&
+                  (appId === 'zomato' || appId === 'swiggy' || appId === 'eatsure')) ||
+                (tpl.id === 'upi' && appId === 'upi_payment') ||
+                (tpl.id === 'cash' &&
+                  appId === 'manual' &&
+                  mode === PaymentMode.CASH);
+              return (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => applyQuickTemplate(tpl.id)}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-md border transition-colors ${
+                    isSelected
+                      ? 'bg-teal-50 text-teal-900 border-teal-300'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  {tpl.label}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Merchant */}
           <div>
             <label
               htmlFor="expense-merchant"
               className="block text-xs font-medium text-slate-700 mb-1"
             >
-              Merchant or Item Description
+              {appId === 'irctc'
+                ? 'Train / Route / Booking Label'
+                : 'Merchant or Item Description'}
             </label>
             <input
               id="expense-merchant"
@@ -151,7 +229,11 @@ export function AddExpenseModal({
                 setMerchant(e.target.value);
                 if (errors.merchant) setErrors((p) => ({ ...p, merchant: undefined }));
               }}
-              placeholder="e.g., Campus Bookstore, Chai Stall, Zomato Order"
+              placeholder={
+                appId === 'irctc'
+                  ? 'e.g., IRCTC 12952 Rajdhani NDLS–MMCT'
+                  : 'e.g., Chai Stall, EatSure Biryani, Metro Card'
+              }
               className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700"
             />
             {errors.merchant && (

@@ -21,10 +21,10 @@ export default defineConfig(() => {
         ],
         manifest: {
           id: '/',
-          name: 'CampusLedger — Encrypted Expense Tracker',
-          short_name: 'CampusLedger',
+          name: 'SpendVault — Personal Finance & Receipt Vault',
+          short_name: 'SpendVault',
           description:
-            'End-to-end encrypted student expense dashboard connecting food and shopping apps with cash and online daily summaries.',
+            'End-to-end encrypted personal expense vault for IRCTC tickets, food & shopping apps, UPI receipts, recurring bills, and cash spends.',
           theme_color: '#0f766e',
           background_color: '#f8fafc',
           display: 'standalone',

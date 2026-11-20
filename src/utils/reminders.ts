@@ -68,8 +68,8 @@ export function buildNightlySummary(
       onlineSpend: 0,
       cashSpend: 0,
       count: 0,
-      title: 'CampusLedger Nightly Check-in',
-      body: `No expenses logged for ${targetDate} yet. Had any cash spends or group orders today? Open CampusLedger to record them.`,
+      title: 'SpendVault Nightly Check-in',
+      body: `No expenses logged for ${targetDate} yet. Had any cash spends, IRCTC bookings, or group orders today? Open SpendVault to record them.`,
     };
   }
 
@@ -79,7 +79,7 @@ export function buildNightlySummary(
     onlineSpend,
     cashSpend,
     count,
-    title: `Today's Spend: ${formatINR(total)} · CampusLedger`,
+    title: `Today's Spend: ${formatINR(total)} · SpendVault`,
     body: `Spent ${formatINR(total)} across ${count} ${
       count === 1 ? 'entry' : 'entries'
     } (Online ${formatINR(onlineSpend)} · Cash ${formatINR(
@@ -134,7 +134,7 @@ export async function dispatchBrowserNotification(
           body,
           icon: '/pwa-192x192.png',
           badge: '/pwa-192x192.png',
-          tag: 'campusledger-nightly-summary',
+          tag: 'spendvault-nightly-summary',
         });
         return true;
       }
@@ -142,7 +142,7 @@ export async function dispatchBrowserNotification(
     new Notification(title, {
       body,
       icon: '/pwa-192x192.png',
-      tag: 'campusledger-nightly-summary',
+      tag: 'spendvault-nightly-summary',
     });
     return true;
   } catch {

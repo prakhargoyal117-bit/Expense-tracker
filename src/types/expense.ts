@@ -14,6 +14,7 @@ export enum ExpenseCategory {
 }
 
 export type AppId =
+  | 'irctc'
   | 'zomato'
   | 'swiggy'
   | 'eatsure'
@@ -60,6 +61,26 @@ export interface ReminderPreferences {
   lastNotifiedDate: string | null; // YYYY-MM-DD
 }
 
+export interface RecurringExpense {
+  id: string;
+  merchant: string;
+  amount: number;
+  category: ExpenseCategory;
+  appId: AppId;
+  mode: PaymentMode;
+  dayOfMonth: number; // 1-28
+  lastLoggedMonth?: string | null; // YYYY-MM
+  notes?: string;
+}
+
+export interface ProfileUpdateInput {
+  displayName: string;
+  profileLabel: string;
+  monthlyBudget: number;
+  savingsGoal: number;
+  avatarColor: string;
+}
+
 export interface ExpenseEntry {
   id: string;
   merchant: string;
@@ -78,8 +99,11 @@ export interface VaultData {
   expenses: ExpenseEntry[];
   apps: ConnectedApp[];
   monthlyBudget: number;
-  studentName: string;
-  campusName: string;
+  savingsGoal?: number;
+  studentName: string; // Display name (key kept for backward compatibility with existing vaults)
+  campusName: string; // Profile label / role (key kept for backward compatibility)
+  avatarColor?: string;
+  recurringExpenses?: RecurringExpense[];
   reminderSettings?: ReminderPreferences;
 }
 

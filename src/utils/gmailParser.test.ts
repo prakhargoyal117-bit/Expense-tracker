@@ -140,3 +140,49 @@ test('parseStatementCsv imports rows with app matching and payment mode detectio
   assert.equal(parsed[1].mode, PaymentMode.CASH);
   assert.equal(parsed[1].amount, 350);
 });
+
+test('parseGmailReceiptMessage and parseOnlinePaymentReceipt detect IRCTC e-tickets and extract PNR/Train details', () => {
+  const irctcEmail = parseGmailReceiptMessage({
+    id: 'irctc-mail-1',
+    internalDate: String(new Date('2026-11-18T08:15:00Z').getTime()),
+    headers: {
+      from: 'IRCTC Ticket <ticketadmin@irctc.co.in>',
+      subject: 'Electronic Reservation Slip - PNR 4215893210',
+    },
+    snippet: 'Train No: 12952 Mumbai Rajdhani. Ticket Fare: Rs. 2,345.00 booked via UPI.',
+  });
+
+  assert.ok(irctcEmail);
+  assert.equal(irctcEmail.appId, 'irctc');
+  assert.equal(irctcEmail.category, ExpenseCategory.TRANSPORT);
+  assert.equal(irctcEmail.amount, 2345);
+  assert.equal(irctcEmail.mode, PaymentMode.ONLINE);
+  assert.match(irctcEmail.notes ?? '', /PNR 4215893210/);
+  assert.match(irctcEmail.notes ?? '', /Train 12952/);
+
+  const irctcSms = parseOnlinePaymentReceipt({
+    id: 'irctc-sms-1',
+    headers: {},
+    bodyText: 'IRCTC: Ticket booked PNR:8451920341 TRN:22436 Vande Bharat Fare:Rs.1845.00',
+    defaultDate: '2026-11-18',
+  });
+
+  assert.ok(irctcSms);
+  assert.equal(irctcSms.appId, 'irctc');
+  assert.equal(irctcSms.category, ExpenseCategory.TRANSPORT);
+  assert.equal(irctcSms.amount, 1845);
+  assert.match(irctcSms.merchant, /IRCTC Train 22436/);
+  assert.match(irctcSms.notes ?? '', /PNR 8451920341/);
+
+  const irctcUpi = parseOnlinePaymentReceipt({
+    id: 'irctc-upi-1',
+    headers: {},
+    bodyText: 'PhonePe: Paid ₹1,420.00 to IRCTC eTicketing via UPI Ref 51238901',
+    defaultDate: '2026-11-18',
+  });
+  assert.ok(irctcUpi);
+  assert.equal(irctcUpi.appId, 'irctc');
+  assert.equal(irctcUpi.amount, 1420);
+  assert.equal(irctcUpi.category, ExpenseCategory.TRANSPORT);
+});
+

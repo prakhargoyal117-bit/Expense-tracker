@@ -85,12 +85,13 @@ export interface GmailScanResult {
 }
 
 const ORDER_APPS_QUERY =
-  '(from:(zomato OR swiggy OR eatsure OR amazon OR blinkit OR flipkart OR zepto OR myntra OR uber OR bookmyshow) OR subject:(Zomato OR Swiggy OR EatSure OR Amazon OR Blinkit OR Flipkart OR Zepto OR Uber)) (order OR receipt OR invoice OR delivered OR trip OR ticket)';
+  '(from:(irctc OR zomato OR swiggy OR eatsure OR amazon OR blinkit OR flipkart OR zepto OR myntra OR uber OR bookmyshow) OR subject:(IRCTC OR "Electronic Reservation Slip" OR Zomato OR Swiggy OR EatSure OR Amazon OR Blinkit OR Flipkart OR Zepto OR Uber)) (order OR receipt OR invoice OR delivered OR trip OR ticket OR PNR OR booked)';
 
 const PAYMENT_APPS_QUERY =
   '("Google Pay" OR GPay OR PhonePe OR Paytm OR BHIM OR CRED OR Razorpay OR Cashfree OR "Amazon Pay" OR MobiKwik OR Freecharge OR PayZapp OR UPI) (paid OR debited OR "payment receipt" OR "payment successful" OR "transaction id" OR "UPI Ref") -OTP -"verification code" -"scratch card"';
 
 const APP_SPECIFIC_QUERIES: Partial<Record<AppId, string>> = {
+  irctc: '(from:irctc OR subject:irctc OR "Electronic Reservation Slip" OR "Indian Railways") (ticket OR PNR OR booking OR fare OR paid)',
   zomato: '(from:zomato OR subject:zomato) (order OR receipt OR invoice OR delivered OR paid)',
   swiggy: '(from:swiggy OR subject:swiggy OR instamart) (order OR receipt OR invoice OR delivered OR paid)',
   eatsure: '(from:eatsure OR subject:eatsure OR "eat sure" OR ovenstory) (order OR receipt OR invoice OR delivered OR paid)',

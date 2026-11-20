@@ -15,6 +15,7 @@ import {
 
 export function formatAppLabel(appId: AppId, apps?: ConnectedApp[]): string {
   if (appId === 'manual') return 'Manual';
+  if (appId === 'irctc') return 'IRCTC';
   if (appId === 'upi_payment') return 'Online Payment Apps';
   if (appId === 'eatsure') return 'EatSure';
   if (appId === 'bookmyshow') return 'BookMyShow';
@@ -429,4 +430,23 @@ export function generateExpensesCsv(
   );
 
   return [header, ...rows].join('\n');
+}
+
+export function computeSafeDailyLimit(
+  remainingBudget: number,
+  monthKey: string,
+  now: Date = new Date(),
+): { safePerDay: number; daysRemaining: number } {
+  if (monthKey === 'all') {
+    return { safePerDay: Math.max(0, Math.round(remainingBudget / 30)), daysRemaining: 30 };
+  }
+  const totalDays = getDaysInMonth(monthKey);
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const daysRemaining =
+    monthKey === currentMonth
+      ? Math.max(1, totalDays - now.getDate() + 1)
+      : totalDays;
+  const safePerDay =
+    remainingBudget > 0 ? Math.round(remainingBudget / daysRemaining) : 0;
+  return { safePerDay, daysRemaining };
 }

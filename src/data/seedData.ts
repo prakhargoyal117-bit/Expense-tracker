@@ -51,6 +51,19 @@ function makeScopes(appName: string, granted: boolean) {
 
 export const INITIAL_APPS: ConnectedApp[] = [
   {
+    id: 'irctc',
+    name: 'IRCTC',
+    category: ExpenseCategory.TRANSPORT,
+    shortDescription:
+      'Indian Railways e-tickets, Tatkal bookings, Vande Bharat & Rail Neer.',
+    accentHex: '#1D4ED8',
+    isConnected: false,
+    connectedAt: null,
+    lastSyncedAt: null,
+    accountHandle: null,
+    scopes: makeScopes('IRCTC', false),
+  },
+  {
     id: 'zomato',
     name: 'Zomato',
     category: ExpenseCategory.FOOD,
@@ -209,7 +222,10 @@ export function createInitialVaultData(): VaultData {
       scopes: a.scopes.map((s) => ({ ...s })),
     })),
     monthlyBudget: 15000,
+    savingsGoal: 5000,
     studentName: 'Personal Vault',
-    campusName: 'Encrypted Local & Cloud Ledger',
+    campusName: 'Personal Finance',
+    avatarColor: '#0F766E',
+    recurringExpenses: [],
   };
 }

@@ -72,7 +72,7 @@ export function formatFirebaseAuthError(
   if (combined.includes('auth/popup-closed-by-user')) {
     return (
       inAppHint ??
-      'Google Sign-In window closed before completing login. Finish signing in (or use Full-Page Redirect Sign-In below) and allow read-only Gmail access.'
+      'Google Sign-In window closed before completing login. Finish signing in or tap "Try Full-Page Redirect Sign-In Instead" below.'
     );
   }
 
@@ -91,8 +91,8 @@ export function formatFirebaseAuthError(
     return 'Network error while reaching Google Sign-In. Check your internet connection and try again.';
   }
 
-  if (combined.includes('access_denied')) {
-    return 'Gmail permission was denied on the Google consent screen. Click Sign in again and grant read-only Gmail access.';
+  if (combined.includes('access_denied') || combined.includes('org_internal')) {
+    return 'Optional Gmail auto-scan access is currently limited to approved test accounts in Google Cloud. You can still use standard Sign in with Google for Cloud Vault Sync, plus the IRCTC & Payment App Receipt Reader and CSV Import.';
   }
 
   return `Google Sign-In failed: ${rawMessage}`;
