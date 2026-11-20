@@ -10,6 +10,7 @@ import {
   X,
 } from 'lucide-react';
 import { formatINR } from '../utils/analytics';
+import { SpendVaultLogo } from './SpendVaultLogo';
 
 export type NavSection =
   | 'overview'
@@ -88,9 +89,7 @@ export function Sidebar({
           }}
           className="inline-flex items-center gap-2.5 whitespace-nowrap shrink-0 group"
         >
-          <span className="w-8 h-8 rounded-lg bg-teal-700 text-white flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-4 h-4" aria-hidden="true" />
-          </span>
+          <SpendVaultLogo size={32} />
           <span className="text-[17px] font-bold tracking-tight text-slate-900">
             SpendVault
           </span>

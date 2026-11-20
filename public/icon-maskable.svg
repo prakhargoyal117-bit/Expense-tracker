@@ -1,24 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
   <defs>
-    <linearGradient id="cl-m-bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#0f766e" />
-      <stop offset="100%" stop-color="#115e59" />
+    <linearGradient id="svm-base" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F766E" />
+      <stop offset="55%" stop-color="#0B4F4A" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+    <linearGradient id="svm-gold" x1="300" y1="116" x2="390" y2="206" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FBBF24" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+    <linearGradient id="svm-ring" x1="120" y1="120" x2="392" y2="392" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5EEAD4" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#14B8A6" stop-opacity="0.55" />
     </linearGradient>
   </defs>
-  <rect width="512" height="512" fill="url(#cl-m-bg)" />
-  <g transform="translate(76.8, 76.8) scale(0.70)">
+
+  <rect width="512" height="512" fill="url(#svm-base)" />
+
+  <g transform="translate(51.2 51.2) scale(0.8)">
     <path
-      d="M256 92L132 144v102c0 88.4 52.8 168.6 124 196 71.2-27.4 124-107.6 124-196V144L256 92z"
-      fill="#ffffff"
-      fill-opacity="0.14"
-      stroke="#ffffff"
-      stroke-width="22"
-      stroke-linejoin="round"
+      d="M368 144A160 160 0 1 1 256 96"
+      stroke="url(#svm-ring)"
+      stroke-width="24"
+      stroke-linecap="round"
     />
+    <rect x="76" y="242" width="38" height="28" rx="14" fill="#5EEAD4" />
+    <rect x="242" y="398" width="28" height="38" rx="14" fill="#2DD4BF" />
+    <rect x="398" y="242" width="38" height="28" rx="14" fill="#2DD4BF" />
+    <circle cx="364" cy="148" r="34" fill="url(#svm-gold)" />
+    <circle cx="364" cy="148" r="13" fill="#0F172A" />
+    <circle cx="256" cy="256" r="118" fill="#FFFFFF" fill-opacity="0.08" />
+    <path d="M202 188H310" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round" />
+    <path d="M202 232H302" stroke="#FFFFFF" stroke-width="24" stroke-linecap="round" />
     <path
-      d="M198 188h116M198 228h116M258 188c24 0 40 16 40 40s-16 40-40 40h-60l74 88"
-      stroke="#ffffff"
-      stroke-width="28"
+      d="M242 188C272 188 292 206 292 232C292 258 272 276 242 276H206L288 344"
+      stroke="#FFFFFF"
+      stroke-width="26"
       stroke-linecap="round"
       stroke-linejoin="round"
     />

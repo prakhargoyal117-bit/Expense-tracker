@@ -1,22 +1,69 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
   <defs>
-    <linearGradient id="cl-bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#0f766e" />
-      <stop offset="100%" stop-color="#115e59" />
+    <linearGradient id="sv-base" x1="36" y1="24" x2="476" y2="488" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F766E" />
+      <stop offset="55%" stop-color="#0B4F4A" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+    <linearGradient id="sv-gold" x1="312" y1="96" x2="420" y2="204" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FBBF24" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+    <linearGradient id="sv-ring" x1="96" y1="96" x2="416" y2="416" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5EEAD4" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#14B8A6" stop-opacity="0.55" />
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#cl-bg)" />
+
+  <!-- Outer rounded vault chassis -->
+  <rect width="512" height="512" rx="116" fill="url(#sv-base)" />
+  <rect
+    x="22"
+    y="22"
+    width="468"
+    height="468"
+    rx="96"
+    stroke="#FFFFFF"
+    stroke-opacity="0.12"
+    stroke-width="6"
+  />
+
+  <!-- Mechanical encrypted vault dial ring (broken arc for open-entry geometric motif) -->
   <path
-    d="M256 92L132 144v102c0 88.4 52.8 168.6 124 196 71.2-27.4 124-107.6 124-196V144L256 92z"
-    fill="#ffffff"
-    fill-opacity="0.14"
-    stroke="#ffffff"
-    stroke-width="20"
-    stroke-linejoin="round"
+    d="M368 144A160 160 0 1 1 256 96"
+    stroke="url(#sv-ring)"
+    stroke-width="24"
+    stroke-linecap="round"
+  />
+
+  <!-- 3 Vault locking lugs at left, bottom, right -->
+  <rect x="76" y="242" width="38" height="28" rx="14" fill="#5EEAD4" />
+  <rect x="242" y="398" width="28" height="38" rx="14" fill="#2DD4BF" />
+  <rect x="398" y="242" width="38" height="28" rx="14" fill="#2DD4BF" />
+
+  <!-- Warm amber vault key-pin accent in upper-right dial notch -->
+  <circle cx="364" cy="148" r="34" fill="url(#sv-gold)" />
+  <circle cx="364" cy="148" r="13" fill="#0F172A" />
+
+  <!-- Inner safe face plate -->
+  <circle cx="256" cy="256" r="118" fill="#FFFFFF" fill-opacity="0.08" />
+
+  <!-- Bespoke geometric Rupee + Ledger Vault Monogram -->
+  <path
+    d="M202 188H310"
+    stroke="#FFFFFF"
+    stroke-width="26"
+    stroke-linecap="round"
   />
   <path
-    d="M198 188h116M198 228h116M258 188c24 0 40 16 40 40s-16 40-40 40h-60l74 88"
-    stroke="#ffffff"
+    d="M202 232H302"
+    stroke="#FFFFFF"
+    stroke-width="24"
+    stroke-linecap="round"
+  />
+  <path
+    d="M242 188C272 188 292 206 292 232C292 258 272 276 242 276H206L288 344"
+    stroke="#FFFFFF"
     stroke-width="26"
     stroke-linecap="round"
     stroke-linejoin="round"
