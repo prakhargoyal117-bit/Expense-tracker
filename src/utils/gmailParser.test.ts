@@ -186,3 +186,199 @@ test('parseGmailReceiptMessage and parseOnlinePaymentReceipt detect IRCTC e-tick
   assert.equal(irctcUpi.category, ExpenseCategory.TRANSPORT);
 });
 
+test('parseGmailReceiptMessage eliminates phantom Uber matches on YouTuber/Kuber/promos/cancellations while parsing real Uber receipts', () => {
+  // Common false positives that previously matched bare /uber/i
+  const youtuberMail = parseGmailReceiptMessage({
+    id: 'fp-youtuber',
+    headers: {
+      from: 'YouTube <no-reply@youtube.com>',
+      subject: 'Your favourite YouTuber just uploaded a membership offer',
+    },
+    snippet: 'Join channel membership for ₹159.00/month. Total: ₹159.',
+  });
+  assert.equal(youtuberMail, null);
+
+  const kuberMail = parseGmailReceiptMessage({
+    id: 'fp-kuber',
+    headers: {
+      from: 'Kuber Enterprises <billing@kuberent.in>',
+      subject: 'Newsletter & monthly digest',
+    },
+    snippet: 'Exclusive deals starting at ₹499.00 total.',
+  });
+  assert.equal(kuberMail, null);
+
+  const uberPromo = parseGmailReceiptMessage({
+    id: 'fp-uber-promo',
+    headers: {
+      from: 'Uber <uber@uber.com>',
+      subject: 'Get ₹150 off your next Uber ride this weekend!',
+    },
+    snippet: 'Apply promo code RIDE150 for ₹150 discount on your next trip.',
+  });
+  assert.equal(uberPromo, null);
+
+  const uberCancelled = parseGmailReceiptMessage({
+    id: 'fp-uber-cancel',
+    headers: {
+      from: 'Uber Receipts <uber.india@uber.com>',
+      subject: 'Your Uber trip was cancelled',
+    },
+    snippet: 'Trip cancelled. Refund of ₹240.00 processed to your UPI account.',
+  });
+  assert.equal(uberCancelled, null);
+
+  // Genuine Uber ride receipt must still parse accurately
+  const realUber = parseGmailReceiptMessage({
+    id: 'real-uber-1',
+    internalDate: String(new Date('2026-11-19T12:10:00Z').getTime()),
+    headers: {
+      from: 'Uber Receipts <uber.india@uber.com>',
+      subject: 'Your Thursday afternoon trip with Uber',
+    },
+    snippet: 'Total: ₹268.00 · Paid via UPI · Trip fare ₹240, taxes ₹28.',
+  });
+  assert.ok(realUber);
+  assert.equal(realUber.appId, 'uber');
+  assert.equal(realUber.amount, 268);
+  assert.equal(realUber.category, ExpenseCategory.TRANSPORT);
+});
+
+test('parseOnlinePaymentReceipt and batch parser support FamPay and Navi UPI', () => {
+  const fampay = parseOnlinePaymentReceipt({
+    id: 'fp-1',
+    headers: {},
+    bodyText: 'FamPay: Paid ₹185.00 to BigBasket via UPI Ref 71928341',
+    defaultDate: '2026-11-19',
+  });
+  assert.ok(fampay);
+  assert.equal(fampay.appId, 'bigbasket');
+  assert.equal(fampay.amount, 185);
+  assert.equal(fampay.category, ExpenseCategory.GROCERIES);
+  assert.match(fampay.notes ?? '', /FamPay/);
+
+  const naviUpi = parseOnlinePaymentReceipt({
+    id: 'navi-1',
+    headers: {},
+    bodyText: 'Navi UPI: Payment successful of ₹340 to Campus Cafe via @naviaxis Ref 88210455',
+    defaultDate: '2026-11-19',
+  });
+  assert.ok(naviUpi);
+  assert.equal(naviUpi.appId, 'upi_payment');
+  assert.equal(naviUpi.amount, 340);
+  assert.match(naviUpi.notes ?? '', /Navi UPI/);
+
+  const famX = parseOnlinePaymentReceipt({
+    id: 'famx-1',
+    headers: {},
+    bodyText: 'FamX: Debited ₹499.00 paid to Meesho via UPI Ref 99120411',
+    defaultDate: '2026-11-19',
+  });
+  assert.ok(famX);
+  assert.equal(famX.appId, 'meesho');
+  assert.equal(famX.amount, 499);
+  assert.equal(famX.category, ExpenseCategory.SHOPPING);
+  assert.match(famX.notes ?? '', /FamPay/);
+});
+
+test('parseGmailReceiptMessage supports BigBasket, Meesho, Ajio, Nykaa, JioMart, Ola, and Rapido without Coca-Cola false positives', () => {
+  const bigbasket = parseGmailReceiptMessage({
+    id: 'bb-1',
+    headers: {
+      from: 'BigBasket <orders@bigbasket.com>',
+      subject: 'Your BigBasket order #BB-4481 is delivered',
+    },
+    snippet: 'Order Total: ₹865.00 paid via UPI',
+  });
+  assert.ok(bigbasket);
+  assert.equal(bigbasket.appId, 'bigbasket');
+  assert.equal(bigbasket.category, ExpenseCategory.GROCERIES);
+  assert.equal(bigbasket.amount, 865);
+
+  const meesho = parseGmailReceiptMessage({
+    id: 'meesho-1',
+    headers: {
+      from: 'Meesho <noreply@meesho.com>',
+      subject: 'Your Meesho order #MS-9122 is confirmed',
+    },
+    snippet: 'Total Paid: ₹549.00 via Cash on Delivery',
+  });
+  assert.ok(meesho);
+  assert.equal(meesho.appId, 'meesho');
+  assert.equal(meesho.category, ExpenseCategory.SHOPPING);
+  assert.equal(meesho.mode, PaymentMode.CASH);
+  assert.equal(meesho.amount, 549);
+
+  const ajio = parseGmailReceiptMessage({
+    id: 'ajio-1',
+    headers: {
+      from: 'AJIO <care@ajio.com>',
+      subject: 'Order Confirmed - AJIO #AJ-5501',
+    },
+    snippet: 'Grand Total: ₹1,299.00 paid via UPI',
+  });
+  assert.ok(ajio);
+  assert.equal(ajio.appId, 'ajio');
+  assert.equal(ajio.amount, 1299);
+
+  const nykaa = parseGmailReceiptMessage({
+    id: 'nykaa-1',
+    headers: {
+      from: 'Nykaa <orders@nykaa.com>',
+      subject: 'Your Nykaa order is confirmed',
+    },
+    snippet: 'Total Paid: ₹799.00 via UPI',
+  });
+  assert.ok(nykaa);
+  assert.equal(nykaa.appId, 'nykaa');
+  assert.equal(nykaa.amount, 799);
+
+  const jiomart = parseGmailReceiptMessage({
+    id: 'jm-1',
+    headers: {
+      from: 'JioMart <orders@jiomart.com>',
+      subject: 'Your JioMart grocery invoice',
+    },
+    snippet: 'Total Paid: ₹612.00 via UPI',
+  });
+  assert.ok(jiomart);
+  assert.equal(jiomart.appId, 'jiomart');
+  assert.equal(jiomart.category, ExpenseCategory.GROCERIES);
+
+  const rapido = parseGmailReceiptMessage({
+    id: 'rp-1',
+    headers: {
+      from: 'Rapido <receipts@rapido.bike>',
+      subject: 'Your Rapido Bike ride receipt',
+    },
+    snippet: 'Total Paid: ₹75.00 via UPI',
+  });
+  assert.ok(rapido);
+  assert.equal(rapido.appId, 'rapido');
+  assert.equal(rapido.category, ExpenseCategory.TRANSPORT);
+
+  const ola = parseGmailReceiptMessage({
+    id: 'ola-1',
+    headers: {
+      from: 'Ola Cabs <noreply@olacabs.com>',
+      subject: 'Your Ola Auto ride receipt',
+    },
+    snippet: 'Total Paid: ₹145.00 via UPI',
+  });
+  assert.ok(ola);
+  assert.equal(ola.appId, 'ola');
+  assert.equal(ola.category, ExpenseCategory.TRANSPORT);
+
+  // Word-boundary check: Coca-Cola must NOT match Ola
+  const cola = parseGmailReceiptMessage({
+    id: 'fp-cola',
+    headers: {
+      from: 'Coca-Cola Store <orders@cocacola.com>',
+      subject: 'Your Coca-Cola receipt',
+    },
+    snippet: 'Total Paid: ₹120.00',
+  });
+  assert.equal(cola, null);
+});
+
+

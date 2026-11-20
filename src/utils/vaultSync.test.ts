@@ -134,3 +134,54 @@ test('shouldForceGmailConsent avoids unnecessary re-verification unless scope wa
     true,
   );
 });
+
+test('isSwitchingGoogleAccount and decideCloudReconciliation prevent pushing previous user data into a switched account', async () => {
+  const { isSwitchingGoogleAccount } = await import('./vaultSync');
+  assert.equal(isSwitchingGoogleAccount(null, 'uid-friend'), false);
+  assert.equal(isSwitchingGoogleAccount('uid-owner', 'uid-owner'), false);
+  assert.equal(isSwitchingGoogleAccount('uid-owner', 'uid-friend'), true);
+
+  const ownerVault = createInitialVaultData();
+  ownerVault.studentName = 'Owner';
+  ownerVault.expenses.push({
+    id: 'exp-uber-owner',
+    merchant: 'Uber Trip',
+    amount: 320,
+    date: '2026-11-20',
+    time: '09:00',
+    mode: PaymentMode.ONLINE,
+    category: ExpenseCategory.TRANSPORT,
+    appId: 'uber',
+    source: 'app_sync',
+  });
+
+  // When switching to a friend who has no cloud vault yet, never push owner's local vault
+  assert.equal(
+    decideCloudReconciliation({
+      localVault: ownerVault,
+      localEnvelope: makeEnvelope({ hasCustomPassphrase: false }),
+      cloudEnvelope: null,
+      switchedAccount: true,
+    }),
+    'up_to_date',
+  );
+
+  // When switching to a friend who has a cloud vault, always pull their cloud vault
+  assert.equal(
+    decideCloudReconciliation({
+      localVault: ownerVault,
+      localEnvelope: makeEnvelope({
+        ciphertextBase64: 'OWNER_DATA',
+        updatedAt: '2026-11-20T18:00:00.000Z',
+      }),
+      cloudEnvelope: makeEnvelope({
+        ciphertextBase64: 'FRIEND_DATA',
+        updatedAt: '2026-11-19T10:00:00.000Z',
+        hasCustomPassphrase: false,
+      }),
+      switchedAccount: true,
+    }),
+    'auto_pull_default',
+  );
+});
+

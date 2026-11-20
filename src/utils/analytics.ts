@@ -18,6 +18,8 @@ export function formatAppLabel(appId: AppId, apps?: ConnectedApp[]): string {
   if (appId === 'irctc') return 'IRCTC';
   if (appId === 'upi_payment') return 'Online Payment Apps';
   if (appId === 'eatsure') return 'EatSure';
+  if (appId === 'bigbasket') return 'BigBasket';
+  if (appId === 'jiomart') return 'JioMart';
   if (appId === 'bookmyshow') return 'BookMyShow';
   const found = apps?.find((a) => a.id === appId);
   if (found) return found.name;

@@ -41,19 +41,31 @@ const APP_MATCHERS: AppMatcher[] = [
     appId: 'zomato',
     category: ExpenseCategory.FOOD,
     displayName: 'Zomato',
-    patterns: [/zomato/i],
+    patterns: [/\bzomato\b/i, /@zomato\.com/i],
   },
   {
     appId: 'swiggy',
     category: ExpenseCategory.FOOD,
     displayName: 'Swiggy',
-    patterns: [/swiggy/i, /instamart/i],
+    patterns: [/\bswiggy\b/i, /\binstamart\b/i, /@swiggy\.in/i],
   },
   {
     appId: 'eatsure',
     category: ExpenseCategory.FOOD,
     displayName: 'EatSure',
-    patterns: [/eatsure/i, /eat\s*sure/i, /ovenstory/i],
+    patterns: [/\beatsure\b/i, /\beat\s*sure\b/i, /\bovenstory\b/i, /@eatsure\.com/i],
+  },
+  {
+    appId: 'bigbasket',
+    category: ExpenseCategory.GROCERIES,
+    displayName: 'BigBasket',
+    patterns: [/\bbigbasket\b/i, /\bbig\s*basket\b/i, /\bbbnow\b/i, /\bbbdaily\b/i, /@bigbasket\.com/i],
+  },
+  {
+    appId: 'meesho',
+    category: ExpenseCategory.SHOPPING,
+    displayName: 'Meesho',
+    patterns: [/\bmeesho\b/i, /@meesho\.com/i],
   },
   {
     appId: 'amazon',
@@ -65,44 +77,90 @@ const APP_MATCHERS: AppMatcher[] = [
     appId: 'blinkit',
     category: ExpenseCategory.GROCERIES,
     displayName: 'Blinkit',
-    patterns: [/blinkit/i, /grofers/i],
+    patterns: [/\bblinkit\b/i, /\bgrofers\b/i],
   },
   {
     appId: 'flipkart',
     category: ExpenseCategory.SHOPPING,
     displayName: 'Flipkart',
-    patterns: [/flipkart/i],
+    patterns: [/\bflipkart\b/i, /@flipkart\.com/i],
   },
   {
     appId: 'zepto',
     category: ExpenseCategory.GROCERIES,
     displayName: 'Zepto',
-    patterns: [/zepto/i],
+    patterns: [/\bzepto\b/i, /@zeptonow\.com/i],
+  },
+  {
+    appId: 'jiomart',
+    category: ExpenseCategory.GROCERIES,
+    displayName: 'JioMart',
+    patterns: [/\bjiomart\b/i, /\bjio\s*mart\b/i, /@jiomart\.com/i],
   },
   {
     appId: 'myntra',
     category: ExpenseCategory.SHOPPING,
     displayName: 'Myntra',
-    patterns: [/myntra/i],
+    patterns: [/\bmyntra\b/i, /@myntra\.com/i],
+  },
+  {
+    appId: 'ajio',
+    category: ExpenseCategory.SHOPPING,
+    displayName: 'Ajio',
+    patterns: [/\bajio\b/i, /@ajio\.com/i],
+  },
+  {
+    appId: 'nykaa',
+    category: ExpenseCategory.SHOPPING,
+    displayName: 'Nykaa',
+    patterns: [/\bnykaa\b/i, /@nykaa\.com/i],
   },
   {
     appId: 'uber',
     category: ExpenseCategory.TRANSPORT,
     displayName: 'Uber',
-    patterns: [/uber/i],
+    patterns: [/@uber\.com/i, /\buber\s*(?:india|receipts?|trip|ride|eats|cab|auto|moto|premier|go|xl)\b/i, /\buber\b/i],
+  },
+  {
+    appId: 'ola',
+    category: ExpenseCategory.TRANSPORT,
+    displayName: 'Ola',
+    patterns: [/@olacabs\.com/i, /\bolacabs\b/i, /\bola\s*(?:cabs?|auto|electric|money|ride|trip|bike)\b/i],
+  },
+  {
+    appId: 'rapido',
+    category: ExpenseCategory.TRANSPORT,
+    displayName: 'Rapido',
+    patterns: [/\brapido\b/i, /@rapido\.bike/i],
   },
   {
     appId: 'bookmyshow',
     category: ExpenseCategory.ENTERTAINMENT,
     displayName: 'BookMyShow',
-    patterns: [/bookmyshow/i],
+    patterns: [/\bbookmyshow\b/i, /@bookmyshow\.com/i],
   },
 ];
 
+/**
+ * Matches a merchant app strictly from sender (`from`) and `subject` for Gmail messages
+ * so casual mentions in email bodies (like "YouTuber", "Kuber", or footer text) never trigger false matches.
+ * When `from` is empty (e.g., UPI payee name or CSV merchant cell), checks the provided merchant text with strict word boundaries.
+ */
 export function matchAppFromEmail(from: string, subject: string, text: string): AppMatcher | null {
-  const combined = `${from} ${subject} ${text.slice(0, 300)}`;
+  const hasEmailHeaders = Boolean(from.trim());
+  const target = hasEmailHeaders ? `${from}\n${subject}` : `${subject} ${text.slice(0, 200)}`;
+
   for (const matcher of APP_MATCHERS) {
-    if (matcher.patterns.some((re) => re.test(combined))) {
+    if (matcher.appId === 'uber' && hasEmailHeaders) {
+      // Strict check for Uber in Gmail: sender must be from uber.com / "Uber", OR subject must explicitly mention a real Uber trip/ride/receipt
+      const fromIsUber = /@uber\.com|\buber\b/i.test(from);
+      const subjectIsUberReceipt = /\buber\b/i.test(subject) && /\b(trip|ride|receipt|invoice|eats|order)\b/i.test(subject);
+      if (fromIsUber || subjectIsUberReceipt) {
+        return matcher;
+      }
+      continue;
+    }
+    if (matcher.patterns.some((re) => re.test(target))) {
       return matcher;
     }
   }
@@ -110,21 +168,24 @@ export function matchAppFromEmail(from: string, subject: string, text: string): 
 }
 
 export function extractAmountINR(text: string): number | null {
-  // Prioritize explicit total or ticket fare labels first, then currency markers
+  // Prioritize explicit final total labels first (avoiding "Subtotal"), then fare/paid labels, then currency markers
   const priorityPatterns = [
-    /(?:grand\s*total|order\s*total|total\s*paid|amount\s*paid|total\s*amount|bill\s*total|ticket\s*fare|total\s*fare|fare|paid)\s*[:\-]?\s*(?:₹|rs\.?|inr)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i,
+    /(?:grand\s*total|order\s*total|total\s*paid|amount\s*paid|total\s*amount|bill\s*total|total\s*fare|net\s*payable|(?<!sub\s*)(?<!sub)\btotal)\s*[:\-]?\s*(?:₹|rs\.?|inr)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i,
+    /(?:ticket\s*fare|fare|paid)\s*[:\-]?\s*(?:₹|rs\.?|inr)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i,
     /(?:₹|rs\.?|inr)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/gi,
   ];
 
-  const firstMatch = priorityPatterns[0].exec(text);
-  if (firstMatch && firstMatch[1]) {
-    const val = Math.round(Number(firstMatch[1].replace(/,/g, '')));
-    if (Number.isFinite(val) && val > 0 && val < 500_000) {
-      return val;
+  for (const re of priorityPatterns.slice(0, 2)) {
+    const match = re.exec(text);
+    if (match && match[1]) {
+      const val = Math.round(Number(match[1].replace(/,/g, '')));
+      if (Number.isFinite(val) && val > 0 && val < 500_000) {
+        return val;
+      }
     }
   }
 
-  const allMatches = Array.from(text.matchAll(priorityPatterns[1]));
+  const allMatches = Array.from(text.matchAll(priorityPatterns[2]));
   const candidates = allMatches
     .map((m) => Math.round(Number(m[1].replace(/,/g, ''))))
     .filter((n) => Number.isFinite(n) && n > 0 && n < 500_000);
@@ -193,15 +254,52 @@ export function parseGmailReceiptMessage(msg: GmailRawMessage): ExpenseEntry | n
   const body = msg.bodyText ?? msg.snippet ?? '';
   const fullText = `${subject}\n${msg.snippet ?? ''}\n${body}`;
 
-  // Filter out promo/marketing emails without order/receipt/ticket keywords
+  // Reject OTPs / login / verification codes
+  if (
+    /\b(otp|one[\s-]*time\s*password|verification\s*code|login\s*code|security\s*code)\b/i.test(
+      fullText,
+    )
+  ) {
+    return null;
+  }
+
+  // Reject promotional offers, coupons, discounts, vouchers, and marketing blasts
+  if (
+    /\b(flat\s*(?:\d+%|₹|rs\.?)\s*off|up\s*to\s*(?:\d+%|₹|rs\.?)\s*off|get\s*(?:₹|rs\.?)\s*\d+\s*off|save\s*(?:up\s*to\s*)?(?:₹|rs\.?)\s*\d+|use\s*(?:promo\s*)?code|promo\s*code|coupon\s*code|refer\s*(?:&|and)\s*earn|scratch\s*card|claim\s*(?:your\s*)?(?:reward|cashback|offer|voucher)|ride\s*pass\s*offer|limited[\s-]*time\s*offer|discount\s*up\s*to|win\s*(?:up\s*to|upto))\b/i.test(
+      fullText,
+    )
+  ) {
+    return null;
+  }
+
+  // Reject refunds, cancellations, and incoming credits
+  if (
+    /\b(refund\s*(?:processed|credited|initiated|issued)|order\s*cancel(?:led|ed)|trip\s*cancel(?:led|ed)|ride\s*cancel(?:led|ed)|booking\s*cancel(?:led|ed)|credited\s*(?:to|in|into)\s*(?:your|a\/c))\b/i.test(
+      fullText,
+    )
+  ) {
+    return null;
+  }
+
+  // Must confirm a real completed order, ticket, or payment receipt
   const looksLikeReceipt =
-    /\b(order|receipt|invoice|delivered|trip|booking|booked|ticket|e-?ticket|pnr|fare|confirmed|payment|bill|summary)\b/i.test(
+    /\b(order\s*(?:confirmed|delivered|summary|placed|id|#)|receipt|invoice|tax\s*invoice|delivered|trip\s*with\s*uber|your\s*.*\s*trip|booking\s*confirmed|ticket\s*booked|e-?ticket|pnr|total\s*fare|ticket\s*fare|amount\s*paid|total\s*paid|grand\s*total|order\s*total|bill\s*total|payment\s*(?:successful|confirmed|receipt))\b/i.test(
       fullText,
     );
   if (!looksLikeReceipt) return null;
 
   const matcher = matchAppFromEmail(from, subject, fullText);
   if (!matcher) return null;
+
+  // Extra guard for Uber: reject emails without an actual charge/receipt breakdown (e.g. generic trip safety/promo notices)
+  if (
+    matcher.appId === 'uber' &&
+    !/\b(total|receipt|invoice|charged|paid|fare|trip\s*fare|subtotal|payments?)\b/i.test(
+      fullText,
+    )
+  ) {
+    return null;
+  }
 
   const amount = extractAmountINR(fullText);
   if (!amount) return null;
@@ -311,8 +409,12 @@ const ONLINE_PAYMENT_APP_MATCHERS: PaymentAppMatcher[] = [
     patterns: [/\bslice\s*(?:pay|upi|card)?\b/i],
   },
   {
+    name: 'FamPay',
+    patterns: [/\bfampay\b/i, /\bfamx\b/i, /\bfamapp\b/i, /@fam\b/i, /fampay\.in/i],
+  },
+  {
     name: 'Navi UPI',
-    patterns: [/\bnavi\s*upi\b/i],
+    patterns: [/\bnavi\s*(?:upi|pay)\b/i, /@naviaxis\b/i, /navi\.com/i],
   },
   {
     name: 'UPI Payment App',
@@ -354,7 +456,7 @@ function inferExpenseCategory(text: string): ExpenseCategory {
     return ExpenseCategory.TRANSPORT;
   }
   if (
-    /\b(grocery|groceries|mart|supermarket|kirana|milk|dairy|blinkit|zepto|instamart|bigbasket)\b/i.test(
+    /\b(grocery|groceries|mart|supermarket|kirana|milk|dairy|blinkit|zepto|instamart|bigbasket|bbnow|bbdaily|jiomart)\b/i.test(
       text,
     )
   ) {
@@ -374,7 +476,7 @@ function inferExpenseCategory(text: string): ExpenseCategory {
   ) {
     return ExpenseCategory.ENTERTAINMENT;
   }
-  if (/\b(amazon|flipkart|myntra|ajio|nykaa|store|shop|apparel)\b/i.test(text)) {
+  if (/\b(amazon|flipkart|meesho|myntra|ajio|nykaa|store|shop|apparel)\b/i.test(text)) {
     return ExpenseCategory.SHOPPING;
   }
   return ExpenseCategory.OTHER;

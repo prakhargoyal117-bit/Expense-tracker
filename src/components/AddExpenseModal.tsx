@@ -38,6 +38,7 @@ export function AddExpenseModal({
   const [category, setCategory] = useState<ExpenseCategory>(ExpenseCategory.FOOD);
   const [appId, setAppId] = useState<AppId>('manual');
   const [notes, setNotes] = useState('');
+  const [upiProvider, setUpiProvider] = useState<string>('');
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [isGroupSplit, setIsGroupSplit] = useState(false);
   const [totalBillInput, setTotalBillInput] = useState('');
@@ -77,11 +78,13 @@ export function AddExpenseModal({
         setCategory(ExpenseCategory.TRANSPORT);
         setMode(PaymentMode.ONLINE);
         setMerchant('IRCTC Train Ticket');
+        setUpiProvider('');
       } else {
         setMerchant('');
         setAppId('manual');
         setMode(PaymentMode.ONLINE);
         setCategory(ExpenseCategory.FOOD);
+        setUpiProvider('');
       }
     }
   }, [isOpen, defaultDate, initialPreset]);
@@ -113,6 +116,14 @@ export function AddExpenseModal({
       }
     }
 
+    const trimmedNotes = notes.trim();
+    const finalNotes =
+      appId === 'upi_payment' && upiProvider
+        ? trimmedNotes
+          ? `Paid via ${upiProvider} · ${trimmedNotes}`
+          : `Paid via ${upiProvider}`
+        : trimmedNotes || undefined;
+
     const payload: ManualExpenseInput = {
       merchant,
       amount,
@@ -121,7 +132,7 @@ export function AddExpenseModal({
       mode,
       category,
       appId,
-      notes: notes.trim() || undefined,
+      notes: finalNotes,
       groupSplit,
     };
 
@@ -135,6 +146,7 @@ export function AddExpenseModal({
     setMerchant('');
     setAmount('');
     setNotes('');
+    setUpiProvider('');
     setIsGroupSplit(false);
     setTotalBillInput('');
     setSplitCountInput('2');
@@ -210,6 +222,36 @@ export function AddExpenseModal({
               );
             })}
           </div>
+
+          {appId === 'upi_payment' && (
+            <div className="space-y-1.5" data-testid="upi-provider-selector">
+              <span className="block text-[11px] font-medium text-slate-600">
+                UPI App Used (optional)
+              </span>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {(['Google Pay', 'PhonePe', 'Paytm', 'FamPay', 'Navi UPI', 'BHIM'] as const).map(
+                  (provider) => {
+                    const active = upiProvider === provider;
+                    return (
+                      <button
+                        key={provider}
+                        type="button"
+                        onClick={() => setUpiProvider(active ? '' : provider)}
+                        aria-pressed={active}
+                        className={`px-2.5 py-1 text-xs font-medium rounded-md border transition-colors whitespace-nowrap ${
+                          active
+                            ? 'bg-teal-700 text-white border-teal-700'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {provider}
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Merchant */}
           <div>

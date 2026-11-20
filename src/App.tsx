@@ -57,6 +57,7 @@ import {
 } from './utils/reminders';
 import {
   decideCloudReconciliation,
+  isSwitchingGoogleAccount,
   shouldForceGmailConsent,
 } from './utils/vaultSync';
 import {
@@ -105,6 +106,7 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 
 const LEGACY_STORAGE_KEY = 'campusledger_e2ee_vault_v1';
 const STORAGE_KEY = 'campusledger_e2ee_vault_v2';
+const LAST_GOOGLE_UID_KEY = 'spendvault_last_google_uid';
 
 const SECTION_TITLES: Record<NavSection, string> = {
   overview: 'Overview',
@@ -333,11 +335,47 @@ export default function App() {
     async (user: User) => {
       setIsCloudBusy(true);
       try {
+        const lastUid = localStorage.getItem(LAST_GOOGLE_UID_KEY);
+        const switchedAccount = isSwitchingGoogleAccount(lastUid, user.uid);
+        if (switchedAccount) {
+          if (localPersistTimerRef.current !== null) {
+            window.clearTimeout(localPersistTimerRef.current);
+            localPersistTimerRef.current = null;
+          }
+          if (cloudPushTimerRef.current !== null) {
+            window.clearTimeout(cloudPushTimerRef.current);
+            cloudPushTimerRef.current = null;
+          }
+          localStorage.removeItem(LEGACY_STORAGE_KEY);
+          localStorage.removeItem(STORAGE_KEY);
+          const cleanVault = createInitialVaultData();
+          setVault(cleanVault);
+          vaultRef.current = cleanVault;
+          setActivePassphrase(DEFAULT_VAULT_PASSPHRASE);
+          setIsLocked(false);
+          setSelectedMonth(CURRENT_MONTH);
+          setFilters({
+            month: CURRENT_MONTH,
+            search: '',
+            mode: 'all',
+            appId: 'all',
+            category: 'all',
+          });
+          await persistEncryptedVault(
+            cleanVault,
+            DEFAULT_VAULT_PASSPHRASE,
+            false,
+            { skipCloudSync: true },
+          );
+        }
+        localStorage.setItem(LAST_GOOGLE_UID_KEY, user.uid);
+
         const record = await fetchCloudEncryptedVault(user.uid);
         const action = decideCloudReconciliation({
           localVault: vaultRef.current,
           localEnvelope: envelopeRef.current,
           cloudEnvelope: record?.envelope ?? null,
+          switchedAccount,
         });
 
         if (action === 'auto_pull_default' && record) {
@@ -376,6 +414,12 @@ export default function App() {
           setCloudSyncStatus(
             `Signed in as ${user.email}. Cloud encrypted vault is up to date.`,
           );
+        } else if (switchedAccount) {
+          setPendingCloudRecord(null);
+          setLastCloudSyncAt(null);
+          setCloudSyncStatus(
+            `Switched to ${user.email} with a clean personal workspace.`,
+          );
         }
       } catch {
         // Non-fatal: cloud check failed (e.g. offline); local vault still works
@@ -383,7 +427,7 @@ export default function App() {
         setIsCloudBusy(false);
       }
     },
-    [applyDecryptedVault],
+    [applyDecryptedVault, persistEncryptedVault],
   );
 
   // Initialize Firebase connection check, auth state listener, and redirect sign-in result
@@ -1402,13 +1446,37 @@ export default function App() {
   }, [pendingRedirectScan, isBootstrapping, isLocked, vault]);
 
   const handleGoogleSignOut = async () => {
+    if (localPersistTimerRef.current !== null) {
+      window.clearTimeout(localPersistTimerRef.current);
+      localPersistTimerRef.current = null;
+    }
+    if (cloudPushTimerRef.current !== null) {
+      window.clearTimeout(cloudPushTimerRef.current);
+      cloudPushTimerRef.current = null;
+    }
     await signOutGoogle();
+    googleUserRef.current = null;
+    reconciledUidRef.current = null;
+    localStorage.removeItem(LAST_GOOGLE_UID_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY);
+    const cleanVault = createInitialVaultData();
+    setVault(cleanVault);
+    vaultRef.current = cleanVault;
+    setActivePassphrase(DEFAULT_VAULT_PASSPHRASE);
+    setIsLocked(false);
+    setPendingCloudRecord(null);
+    setLastCloudSyncAt(null);
+    await persistEncryptedVault(cleanVault, DEFAULT_VAULT_PASSPHRASE, false, {
+      skipCloudSync: true,
+    });
     setGoogleUser(null);
     setHasGmailToken(false);
     setShowRedirectFallback(false);
     setGmailStatus(null);
     setAppSyncStatus(null);
     setCloudSyncStatus(null);
+    setShowHomeMenu(true);
   };
 
   // Parse pasted payment receipts from any online payment app (GPay, PhonePe, Paytm, BHIM, CRED, UPI)

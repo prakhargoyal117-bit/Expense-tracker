@@ -85,22 +85,29 @@ export interface GmailScanResult {
 }
 
 const ORDER_APPS_QUERY =
-  '(from:(irctc OR zomato OR swiggy OR eatsure OR amazon OR blinkit OR flipkart OR zepto OR myntra OR uber OR bookmyshow) OR subject:(IRCTC OR "Electronic Reservation Slip" OR Zomato OR Swiggy OR EatSure OR Amazon OR Blinkit OR Flipkart OR Zepto OR Uber)) (order OR receipt OR invoice OR delivered OR trip OR ticket OR PNR OR booked)';
+  '(from:(irctc OR zomato OR swiggy OR eatsure OR amazon OR bigbasket OR meesho OR blinkit OR flipkart OR zepto OR jiomart OR myntra OR ajio OR nykaa OR uber.com OR olacabs OR rapido OR bookmyshow) OR subject:(IRCTC OR "Electronic Reservation Slip" OR Zomato OR Swiggy OR EatSure OR BigBasket OR Meesho OR Amazon OR Blinkit OR Flipkart OR Zepto OR JioMart OR Myntra OR Ajio OR Nykaa OR "trip with Uber" OR "Ola ride" OR Rapido)) (order OR receipt OR invoice OR delivered OR trip OR ticket OR PNR OR booked) -OTP -"verification code" -"use code" -"promo code" -cancelled -refund';
 
 const PAYMENT_APPS_QUERY =
-  '("Google Pay" OR GPay OR PhonePe OR Paytm OR BHIM OR CRED OR Razorpay OR Cashfree OR "Amazon Pay" OR MobiKwik OR Freecharge OR PayZapp OR UPI) (paid OR debited OR "payment receipt" OR "payment successful" OR "transaction id" OR "UPI Ref") -OTP -"verification code" -"scratch card"';
+  '("Google Pay" OR GPay OR PhonePe OR Paytm OR FamPay OR FamX OR "Navi UPI" OR "Navi Pay" OR BHIM OR CRED OR Razorpay OR Cashfree OR "Amazon Pay" OR MobiKwik OR Freecharge OR PayZapp OR UPI) (paid OR debited OR "payment receipt" OR "payment successful" OR "transaction id" OR "UPI Ref") -OTP -"verification code" -"scratch card"';
 
 const APP_SPECIFIC_QUERIES: Partial<Record<AppId, string>> = {
   irctc: '(from:irctc OR subject:irctc OR "Electronic Reservation Slip" OR "Indian Railways") (ticket OR PNR OR booking OR fare OR paid)',
-  zomato: '(from:zomato OR subject:zomato) (order OR receipt OR invoice OR delivered OR paid)',
-  swiggy: '(from:swiggy OR subject:swiggy OR instamart) (order OR receipt OR invoice OR delivered OR paid)',
-  eatsure: '(from:eatsure OR subject:eatsure OR "eat sure" OR ovenstory) (order OR receipt OR invoice OR delivered OR paid)',
-  amazon: '(from:amazon OR subject:amazon) (order OR receipt OR invoice OR delivered OR payment)',
-  blinkit: '(from:blinkit OR from:grofers OR subject:blinkit) (order OR receipt OR invoice OR delivered)',
-  flipkart: '(from:flipkart OR subject:flipkart) (order OR receipt OR invoice OR delivered)',
-  zepto: '(from:zepto OR subject:zepto) (order OR receipt OR invoice OR delivered)',
-  myntra: '(from:myntra OR subject:myntra) (order OR receipt OR invoice OR delivered)',
-  uber: '(from:uber OR subject:uber) (trip OR receipt OR ride OR paid)',
+  zomato: '(from:zomato OR subject:zomato) (order OR receipt OR invoice OR delivered OR paid) -off -promo',
+  swiggy: '(from:swiggy OR subject:swiggy OR instamart) (order OR receipt OR invoice OR delivered OR paid) -off -promo',
+  eatsure: '(from:eatsure OR subject:eatsure OR "eat sure" OR ovenstory) (order OR receipt OR invoice OR delivered OR paid) -off -promo',
+  bigbasket: '(from:bigbasket OR subject:bigbasket OR bbnow OR bbdaily) (order OR receipt OR invoice OR delivered OR paid) -off -promo',
+  meesho: '(from:meesho OR subject:meesho) (order OR receipt OR invoice OR delivered OR confirmed) -off -promo',
+  amazon: '(from:amazon OR subject:amazon) (order OR receipt OR invoice OR delivered OR payment) -promo',
+  blinkit: '(from:blinkit OR from:grofers OR subject:blinkit) (order OR receipt OR invoice OR delivered) -off -promo',
+  flipkart: '(from:flipkart OR subject:flipkart) (order OR receipt OR invoice OR delivered) -off -promo',
+  zepto: '(from:zepto OR subject:zepto) (order OR receipt OR invoice OR delivered) -off -promo',
+  jiomart: '(from:jiomart OR subject:jiomart OR "JioMart") (order OR receipt OR invoice OR delivered) -off -promo',
+  myntra: '(from:myntra OR subject:myntra) (order OR receipt OR invoice OR delivered) -off -promo',
+  ajio: '(from:ajio OR subject:ajio) (order OR receipt OR invoice OR delivered) -off -promo',
+  nykaa: '(from:nykaa OR subject:nykaa) (order OR receipt OR invoice OR delivered) -off -promo',
+  uber: 'from:uber.com (receipt OR "trip with Uber" OR invoice OR "Total") -offer -off -promo -discount -voucher -cancelled',
+  ola: 'from:olacabs.com (invoice OR receipt OR ride OR trip) -offer -off -promo -cancelled',
+  rapido: '(from:rapido OR subject:rapido) (invoice OR receipt OR ride OR trip) -offer -off -promo -cancelled',
   bookmyshow: '(from:bookmyshow OR subject:bookmyshow) (ticket OR booking OR receipt OR confirmed)',
   upi_payment: PAYMENT_APPS_QUERY,
 };

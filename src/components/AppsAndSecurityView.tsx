@@ -254,7 +254,7 @@ export function AppsAndSecurityView({
                     <p className="text-xs text-slate-500">
                       {googleUser
                         ? `Signed in as ${googleUser.email}`
-                        : 'Optional read-only inbox scan for IRCTC, EatSure, Zomato, Swiggy & UPI'}
+                        : 'Optional read-only inbox scan for IRCTC, BigBasket, Meesho, Zomato, Swiggy & UPI'}
                     </p>
                   </div>
                 </div>
@@ -465,10 +465,10 @@ export function AppsAndSecurityView({
               </span>
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">
-                  IRCTC &amp; Online Payment App Receipt Reader (GPay, PhonePe, Paytm, BHIM, CRED, IRCTC)
+                  IRCTC &amp; Online Payment App Receipt Reader (GPay, PhonePe, Paytm, FamPay, Navi UPI, BHIM, CRED, IRCTC)
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Paste IRCTC e-ticket SMS alerts or UPI payment receipts below. Only outgoing payments and rail bookings are read—OTPs, promos, and money-received credits are ignored automatically.
+                  Paste IRCTC e-ticket SMS alerts or UPI payment receipts (including FamPay &amp; Navi UPI) below. Only outgoing payments and rail bookings are read—OTPs, promos, and money-received credits are ignored automatically.
                 </p>
               </div>
             </div>
@@ -487,7 +487,7 @@ export function AppsAndSecurityView({
               rows={3}
               value={paymentReceiptInput}
               onChange={(e) => setPaymentReceiptInput(e.target.value)}
-              placeholder={'Example:\nIRCTC: Ticket booked PNR:4215893210 TRN:12952 NDLS-MMCT Fare:Rs.1845.00\nPhonePe: Paid ₹240.00 to EatSure Biryani via UPI Ref 43298122'}
+              placeholder={'Example:\nFamPay: Paid ₹185.00 to BigBasket via UPI Ref 71928341\nNavi UPI: Paid ₹499.00 to Meesho via UPI Ref 88210455'}
               className="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700"
             />
           </div>
@@ -504,7 +504,7 @@ export function AppsAndSecurityView({
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
             <span className="text-[11px] text-slate-500">
-              Supports IRCTC e-tickets (PNR &amp; Train No.), Google Pay, PhonePe, Paytm, BHIM, CRED, Amazon Pay, Razorpay &amp; bank UPI debit receipts.
+              Supports IRCTC e-tickets (PNR &amp; Train No.), Google Pay, PhonePe, Paytm, FamPay, Navi UPI, BHIM, CRED, Amazon Pay, Razorpay &amp; bank UPI debit receipts.
             </span>
             <button
               type="button"

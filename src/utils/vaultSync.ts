@@ -23,20 +23,30 @@ export function isVaultEffectivelyBlank(
   );
 }
 
+export function isSwitchingGoogleAccount(
+  lastUid: string | null | undefined,
+  nextUid: string | null | undefined,
+): boolean {
+  return Boolean(lastUid && nextUid && lastUid !== nextUid);
+}
+
 export function decideCloudReconciliation(params: {
   localVault: VaultData | null;
   localEnvelope: EncryptedVaultEnvelope | null;
   cloudEnvelope: EncryptedVaultEnvelope | null;
+  switchedAccount?: boolean;
 }): CloudReconcileAction {
-  const { localVault, localEnvelope, cloudEnvelope } = params;
-  const localBlank = isVaultEffectivelyBlank(localVault, localEnvelope);
+  const { localVault, localEnvelope, cloudEnvelope, switchedAccount = false } = params;
+  const localBlank =
+    switchedAccount || isVaultEffectivelyBlank(localVault, localEnvelope);
 
   if (!cloudEnvelope) {
     return localBlank ? 'up_to_date' : 'auto_push_local';
   }
 
-  // Same ciphertext already loaded locally
+  // Same ciphertext already loaded locally (only valid if not switching accounts)
   if (
+    !switchedAccount &&
     localEnvelope &&
     localEnvelope.ciphertextBase64 === cloudEnvelope.ciphertextBase64 &&
     localEnvelope.ivBase64 === cloudEnvelope.ivBase64
@@ -44,7 +54,7 @@ export function decideCloudReconciliation(params: {
     return 'up_to_date';
   }
 
-  // Fresh browser (e.g. Chrome after creating vault on Brave)
+  // Fresh browser or switched Google account
   if (localBlank) {
     return cloudEnvelope.hasCustomPassphrase
       ? 'prompt_cloud_unlock'
