@@ -185,28 +185,28 @@ export function HomeMenuView({
             className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600"
           >
             <a
+              href="#why-spendvault"
+              className="hover:text-slate-900 transition-colors whitespace-nowrap shrink-0"
+            >
+              Why SpendVault
+            </a>
+            <a
               href="#capabilities"
               className="hover:text-slate-900 transition-colors whitespace-nowrap shrink-0"
             >
               Capabilities
             </a>
             <a
-              href="#how-access-works"
+              href="#developers"
               className="hover:text-slate-900 transition-colors whitespace-nowrap shrink-0"
             >
-              How Access Works
+              Developers
             </a>
             <a
               href="/privacy.html"
               className="hover:text-slate-900 transition-colors whitespace-nowrap shrink-0"
             >
               Privacy Policy
-            </a>
-            <a
-              href="/terms.html"
-              className="hover:text-slate-900 transition-colors whitespace-nowrap shrink-0"
-            >
-              Terms
             </a>
           </nav>
 
@@ -251,14 +251,14 @@ export function HomeMenuView({
                   textWrap: 'balance',
                 }}
               >
-                One private home for every UPI payment, IRCTC ticket, and cash expense.
+                Track every closed-API shopping app, UPI payment, and IRCTC ticket in one private vault.
               </h1>
 
               <p className="text-base text-slate-600 leading-relaxed max-w-2xl">
-                SpendVault tracks monthly budgets, Safe Daily Allowance, recurring bills,
-                IRCTC e-tickets (PNR &amp; train numbers), and receipts from EatSure, Zomato,
-                Swiggy, Amazon, PhonePe, Google Pay, and Paytm. Every record is encrypted
-                inside your browser before saving or syncing.
+                Shopping, food, and travel apps do not offer public APIs to export your spending.
+                SpendVault solves this by syncing the official order receipts these apps already
+                send to your Gmail—alongside FamPay, Navi UPI, PhonePe, Google Pay, Paytm, IRCTC
+                tickets, and cash spends—all encrypted inside your browser with AES-256-GCM.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 max-w-2xl">
@@ -767,11 +767,122 @@ export function HomeMenuView({
           </div>
         </section>
 
+        {/* Main Motive: Solving the Closed-API Expense Tracking Gap */}
+        <section
+          id="why-spendvault"
+          aria-label="Why SpendVault Exists"
+          className="border-t border-slate-200 bg-white py-14 lg:py-16"
+        >
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+            <div className="max-w-3xl space-y-3">
+              <p className="text-xs font-semibold text-teal-800">
+                Main Motive · Closing the Multi-App Visibility Gap
+              </p>
+              <h2
+                className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 leading-tight"
+                style={{ textWrap: 'balance' }}
+              >
+                Shopping apps don&apos;t open their APIs—so we turned your Gmail receipts into a unified expense tracker.
+              </h2>
+              <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+                Today&apos;s daily spending is scattered across dozens of platforms—Amazon, Flipkart,
+                Meesho, BigBasket, JioMart, Ajio, Nykaa, Zomato, Swiggy, Blinkit, Zepto, Uber,
+                Ola, Rapido, and IRCTC. Because none of these apps expose a public API for personal
+                expense tracking, users are left guessing where their money went each month.
+              </p>
+            </div>
+
+            {/* Problem vs. Solution Contrast Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+              <article className="bg-slate-50 border border-slate-200 rounded-xl p-6 sm:p-7 flex flex-col justify-between gap-4">
+                <div className="space-y-2.5">
+                  <p className="text-xs font-semibold text-slate-500">
+                    01. The Problem
+                  </p>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Closed ecosystems with zero public APIs
+                  </h3>
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    E-commerce, food delivery, grocery, and cab platforms lock your order history
+                    inside separate walled apps without public developer APIs. Bank statements only
+                    show cryptic UPI references, while manually logging every purchase quickly
+                    becomes exhausting and error-prone.
+                  </p>
+                </div>
+                <p className="pt-4 border-t border-slate-200/80 text-xs text-slate-500">
+                  Fragmented order history · Cryptic bank SMS · No unified per-app breakdown
+                </p>
+              </article>
+
+              <article className="bg-teal-950 text-white border border-teal-900 rounded-xl p-6 sm:p-7 flex flex-col justify-between gap-4">
+                <div className="space-y-2.5">
+                  <p className="text-xs font-semibold text-teal-300">
+                    02. The SpendVault Solution
+                  </p>
+                  <h3 className="text-lg font-bold text-white">
+                    Automatic, privacy-first Gmail receipt syncing
+                  </h3>
+                  <p className="text-sm text-teal-100/90 leading-relaxed">
+                    Every shopping, travel, and payment app already emails you an official order
+                    confirmation or invoice. SpendVault connects via read-only Gmail sync to extract
+                    only verified receipts directly inside your browser—automatically ignoring OTPs,
+                    promotional offers, and cancelled orders—and encrypts your ledger locally with
+                    AES-256-GCM.
+                  </p>
+                </div>
+                <p className="pt-4 border-t border-teal-800/80 text-xs text-teal-200/90">
+                  Works without merchant APIs · Zero plaintext servers · Full per-app analytics
+                </p>
+              </article>
+            </div>
+
+            {/* 3-Step Mechanism Strip */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+              <div className="border-t border-slate-200 pt-4 space-y-1.5">
+                <p className="text-xs font-mono tabular-nums font-semibold text-teal-800">
+                  Step 01
+                </p>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Apps send email &amp; UPI receipts
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Every order on Amazon, Meesho, BigBasket, Zomato, Swiggy, IRCTC, or UPI apps like
+                  FamPay and Navi UPI leaves an invoice or payment alert.
+                </p>
+              </div>
+              <div className="border-t border-slate-200 pt-4 space-y-1.5">
+                <p className="text-xs font-mono tabular-nums font-semibold text-teal-800">
+                  Step 02
+                </p>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Smart in-browser receipt filtering
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  SpendVault parses sender headers, exact totals, payment modes (Online vs. COD),
+                  and categories right on your device while discarding ads and OTPs.
+                </p>
+              </div>
+              <div className="border-t border-slate-200 pt-4 space-y-1.5">
+                <p className="text-xs font-mono tabular-nums font-semibold text-teal-800">
+                  Step 03
+                </p>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  One encrypted personal dashboard
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Track daily budgets, Safe Daily Allowance, recurring bills, and per-app totals—all
+                  locked behind your personal password or Vault Key.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Capabilities Asymmetric Bento Grid */}
         <section
           id="capabilities"
           aria-label="SpendVault Core Capabilities"
-          className="border-t border-slate-200 bg-white py-14 lg:py-16"
+          className="border-t border-slate-200 bg-slate-50 py-14 lg:py-16"
         >
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
             <div className="max-w-2xl">
@@ -779,25 +890,25 @@ export function HomeMenuView({
                 Built for daily Indian personal finance
               </h2>
               <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
-                Track every rupee across online apps, train tickets, recurring bills, and
-                cash expenses without giving up your financial privacy.
+                Track every rupee across shopping apps, UPI wallets, train tickets, recurring bills,
+                and cash expenses without giving up your financial privacy.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <article className="md:col-span-2 bg-slate-50 border border-slate-200 rounded-xl p-6 space-y-2.5">
+              <article className="md:col-span-2 bg-white border border-slate-200 rounded-xl p-6 space-y-2.5">
                 <h3 className="text-base font-semibold text-slate-900">
                   01. IRCTC Ticket &amp; Online Payment Receipt Reader
                 </h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  Paste IRCTC booking SMS alerts or Google Pay, PhonePe, Paytm, BHIM, and
-                  CRED debit receipts—or optionally connect read-only Gmail scanning.
+                  Paste IRCTC booking SMS alerts or Google Pay, PhonePe, Paytm, FamPay, Navi UPI,
+                  BHIM, and CRED debit receipts—or optionally connect read-only Gmail scanning.
                   SpendVault extracts merchant, amount, PNR, and train numbers locally while
                   ignoring OTPs, promotional messages, and incoming credits.
                 </p>
               </article>
 
-              <article className="bg-slate-50 border border-slate-200 rounded-xl p-6 space-y-2.5">
+              <article className="bg-white border border-slate-200 rounded-xl p-6 space-y-2.5">
                 <h3 className="text-base font-semibold text-slate-900">
                   02. Client-Side AES-256-GCM
                 </h3>
@@ -808,7 +919,7 @@ export function HomeMenuView({
                 </p>
               </article>
 
-              <article className="bg-slate-50 border border-slate-200 rounded-xl p-6 space-y-2.5">
+              <article className="bg-white border border-slate-200 rounded-xl p-6 space-y-2.5">
                 <h3 className="text-base font-semibold text-slate-900">
                   03. Safe Daily Allowance &amp; Recurring Bills
                 </h3>
@@ -818,14 +929,15 @@ export function HomeMenuView({
                 </p>
               </article>
 
-              <article className="md:col-span-2 bg-slate-50 border border-slate-200 rounded-xl p-6 space-y-2.5">
+              <article className="md:col-span-2 bg-white border border-slate-200 rounded-xl p-6 space-y-2.5">
                 <h3 className="text-base font-semibold text-slate-900">
                   04. Complete Per-App &amp; Cash Analytics
                 </h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  Compare Online (UPI/Card) vs. Cash/COD spend day by day across IRCTC,
-                  EatSure, Zomato, Swiggy, Amazon, Flipkart, Blinkit, Zepto, Uber, and manual
-                  entries—with group split tracking and instant CSV export.
+                  Compare Online (UPI/Card) vs. Cash/COD spend day by day across Amazon, Flipkart,
+                  Meesho, BigBasket, JioMart, Ajio, Nykaa, Zomato, Swiggy, EatSure, Blinkit, Zepto,
+                  IRCTC, Uber, Ola, Rapido, and manual entries—with group split tracking and CSV
+                  export.
                 </p>
               </article>
             </div>
@@ -836,11 +948,11 @@ export function HomeMenuView({
         <section
           id="how-access-works"
           aria-label="How SpendVault Access Works"
-          className="border-t border-slate-200 bg-slate-50 py-14"
+          className="border-t border-slate-200 bg-white py-14"
         >
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-2">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 space-y-2">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                   <Cloud className="w-4 h-4 text-teal-700" aria-hidden="true" />
                   <span>Option A: Gmail Sign-In + Inside Menu Password</span>
@@ -852,7 +964,7 @@ export function HomeMenuView({
                 </p>
               </div>
 
-              <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-2">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 space-y-2">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                   <KeyRound className="w-4 h-4 text-teal-700" aria-hidden="true" />
                   <span>Option B: Personal Vault Opened by Vault Key</span>
@@ -863,6 +975,123 @@ export function HomeMenuView({
                   Vault Key on the Home Menu to decrypt and enter immediately.
                 </p>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Developers Section */}
+        <section
+          id="developers"
+          aria-label="SpendVault Developers"
+          className="border-t border-slate-200 bg-slate-50 py-14 lg:py-16"
+        >
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+            <div className="max-w-2xl space-y-2">
+              <p className="text-xs font-semibold text-teal-800">
+                Project Team · Coursework Showcase
+              </p>
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+                Developed By
+              </h2>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Built as a practical, privacy-first solution to track personal expenses across
+                closed-API shopping, food, travel, and UPI apps using Gmail receipt syncing.
+              </p>
+            </div>
+
+            <div
+              className="grid grid-cols-1 md:grid-cols-2 gap-6"
+              data-testid="developers-grid"
+            >
+              {/* Developer Box 1 */}
+              <article
+                data-testid="developer-card-prakhar"
+                className="bg-white border border-slate-200 rounded-xl p-6 flex flex-col justify-between gap-6"
+              >
+                <div className="flex items-start gap-4">
+                  <div
+                    aria-hidden="true"
+                    className="w-12 h-12 rounded-xl bg-teal-900 text-white font-bold text-base tracking-tight flex items-center justify-center shrink-0"
+                  >
+                    PG
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-3">
+                    <div>
+                      <p className="text-xs font-medium text-slate-500">Developer</p>
+                      <h3 className="text-lg font-bold text-slate-900 tracking-tight mt-0.5">
+                        Prakhar Goyal
+                      </h3>
+                    </div>
+
+                    <dl className="divide-y divide-slate-100 border-t border-slate-100 text-sm">
+                      <div className="py-2 flex items-center justify-between gap-4">
+                        <dt className="text-xs font-medium text-slate-500">Name</dt>
+                        <dd className="text-sm font-semibold text-slate-900 text-right">
+                          Prakhar Goyal
+                        </dd>
+                      </div>
+                      <div className="py-2 flex items-center justify-between gap-4">
+                        <dt className="text-xs font-medium text-slate-500">Scholar No.</dt>
+                        <dd className="text-sm font-mono tabular-nums font-semibold text-slate-900 text-right">
+                          263U010002
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+                </div>
+
+                <div className="pt-3.5 border-t border-slate-200 flex items-center justify-between gap-3">
+                  <span className="text-xs text-slate-500">Course Code</span>
+                  <span className="text-sm font-mono tabular-nums font-semibold text-teal-800">
+                    FoCP(1003)
+                  </span>
+                </div>
+              </article>
+
+              {/* Developer Box 2 */}
+              <article
+                data-testid="developer-card-mridul"
+                className="bg-white border border-slate-200 rounded-xl p-6 flex flex-col justify-between gap-6"
+              >
+                <div className="flex items-start gap-4">
+                  <div
+                    aria-hidden="true"
+                    className="w-12 h-12 rounded-xl bg-slate-900 text-white font-bold text-base tracking-tight flex items-center justify-center shrink-0"
+                  >
+                    MS
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-3">
+                    <div>
+                      <p className="text-xs font-medium text-slate-500">Developer</p>
+                      <h3 className="text-lg font-bold text-slate-900 tracking-tight mt-0.5">
+                        Mridul Sengar
+                      </h3>
+                    </div>
+
+                    <dl className="divide-y divide-slate-100 border-t border-slate-100 text-sm">
+                      <div className="py-2 flex items-center justify-between gap-4">
+                        <dt className="text-xs font-medium text-slate-500">Name</dt>
+                        <dd className="text-sm font-semibold text-slate-900 text-right">
+                          Mridul Sengar
+                        </dd>
+                      </div>
+                      <div className="py-2 flex items-center justify-between gap-4">
+                        <dt className="text-xs font-medium text-slate-500">Scholar No.</dt>
+                        <dd className="text-sm font-mono tabular-nums font-semibold text-slate-900 text-right">
+                          26U010003
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+                </div>
+
+                <div className="pt-3.5 border-t border-slate-200 flex items-center justify-between gap-3">
+                  <span className="text-xs text-slate-500">Course Code</span>
+                  <span className="text-sm font-mono tabular-nums font-semibold text-teal-800">
+                    FoCP(1003)
+                  </span>
+                </div>
+              </article>
             </div>
           </div>
         </section>
