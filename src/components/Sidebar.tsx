@@ -77,9 +77,9 @@ export function Sidebar({
       .toUpperCase() || 'SV';
 
   const content = (
-    <div className="flex flex-col h-full bg-white border-r border-slate-200 w-64 shrink-0">
+    <div className="flex flex-col h-full bg-white border-r border-[#1a1a1a]/10 w-64 shrink-0">
       {/* Brand Wordmark */}
-      <div className="h-16 px-5 flex items-center justify-between border-b border-slate-200">
+      <div className="h-16 px-5 flex items-center justify-between border-b border-[#1a1a1a]/10">
         <a
           href="#overview"
           onClick={(e) => {
@@ -89,8 +89,8 @@ export function Sidebar({
           }}
           className="inline-flex items-center gap-2.5 whitespace-nowrap shrink-0 group"
         >
-          <SpendVaultLogo size={32} />
-          <span className="text-[17px] font-bold tracking-tight text-slate-900">
+          <SpendVaultLogo size={30} />
+          <span className="font-serif italic text-[1.5rem] font-semibold leading-none tracking-[-0.01em] text-[#1a1a1a]">
             SpendVault
           </span>
         </a>
@@ -98,7 +98,7 @@ export function Sidebar({
           type="button"
           onClick={onCloseMobile}
           aria-label="Close navigation menu"
-          className="lg:hidden p-1.5 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+          className="lg:hidden p-1.5 rounded-md text-[#1a1a1a]/60 hover:text-[#1a1a1a] hover:bg-[#f2efeb]"
         >
           <X className="w-5 h-5" />
         </button>
@@ -118,15 +118,15 @@ export function Sidebar({
                 onCloseMobile();
               }}
               aria-current={isActive ? 'page' : undefined}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-colors whitespace-nowrap ${
                 isActive
-                  ? 'bg-teal-50 text-teal-900'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                  ? 'bg-[#f2efeb] text-[#1a1a1a]'
+                  : 'text-[#1a1a1a]/65 hover:text-[#1a1a1a] hover:bg-[#f2efeb]/60'
               }`}
             >
               <Icon
                 className={`w-4 h-4 shrink-0 ${
-                  isActive ? 'text-teal-700' : 'text-slate-400'
+                  isActive ? 'text-[#0f766e]' : 'text-[#1a1a1a]/40'
                 }`}
                 aria-hidden="true"
               />
@@ -136,7 +136,7 @@ export function Sidebar({
         })}
 
         {onGoHome && (
-          <div className="pt-3 mt-3 border-t border-slate-100">
+          <div className="pt-3 mt-3 border-t border-[#1a1a1a]/8">
             <button
               type="button"
               data-testid="sidebar-home-menu-btn"
@@ -144,9 +144,9 @@ export function Sidebar({
                 onGoHome();
                 onCloseMobile();
               }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-[#1a1a1a]/65 hover:bg-[#f2efeb]/60 hover:text-[#1a1a1a] transition-colors"
             >
-              <Home className="w-[18px] h-[18px] text-slate-400 shrink-0" aria-hidden="true" />
+              <Home className="w-[18px] h-[18px] text-[#1a1a1a]/40 shrink-0" aria-hidden="true" />
               <span className="truncate">Home Menu</span>
             </button>
           </div>
@@ -155,18 +155,18 @@ export function Sidebar({
 
       {/* Budget Pace & Interactive Profile Card */}
       <div className="px-4 pb-4 space-y-3.5">
-        <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-          <div className="flex items-center justify-between text-xs text-slate-600 mb-2">
-            <span className="font-medium text-slate-800">Monthly Budget</span>
+        <div className="p-3.5 bg-[#f2efeb] border border-[#1a1a1a]/10 rounded-2xl">
+          <div className="flex items-center justify-between text-xs text-[#1a1a1a]/65 mb-2">
+            <span className="font-mono text-[10px] uppercase tracking-[0.08em] font-medium text-[#1a1a1a]">Monthly Budget</span>
             <span
               className={`font-mono tabular-nums font-semibold ${
-                isOverBudget ? 'text-red-700' : 'text-slate-900'
+                isOverBudget ? 'text-red-700' : 'text-[#1a1a1a]'
               }`}
             >
               {budgetPct}%
             </span>
           </div>
-          <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-[#1a1a1a]/10 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${
                 isOverBudget

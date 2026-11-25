@@ -64,26 +64,26 @@ export function VaultLockScreen({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-      <div className="w-full max-w-md bg-white border border-slate-200 rounded-xl p-8 space-y-6">
-        <div className="flex items-center gap-3">
-          <span className="w-11 h-11 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-800 shrink-0">
+    <div className="min-h-screen bg-[#f2efeb] text-[#1a1a1a] flex items-center justify-center p-6">
+      <div className="w-full max-w-md bg-white border border-[#1a1a1a]/8 rounded-[2rem] p-8 sm:p-9 shadow-[0_40px_80px_-20px_rgba(26,26,26,0.08)] space-y-6">
+        <div className="flex items-center gap-3.5">
+          <span className="w-11 h-11 rounded-2xl bg-[#f2efeb] border border-[#1a1a1a]/10 flex items-center justify-center text-[#0f766e] shrink-0">
             <Lock className="w-5 h-5" aria-hidden="true" />
           </span>
           <div>
-            <h1 className="text-xl font-bold text-slate-900">
+            <h1 className="font-serif text-2xl font-semibold text-[#1a1a1a] leading-tight">
               {cloudVaultAvailable
                 ? 'Unlock Cloud Synced Vault'
                 : 'SpendVault Locked'}
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Encrypted with {envelope?.algorithm ?? 'AES-256-GCM'} ·{' '}
+            <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#1a1a1a]/55 mt-0.5">
+              {envelope?.algorithm ?? 'AES-256-GCM'} ·{' '}
               {envelope?.kdf ?? 'PBKDF2-SHA256'}
             </p>
           </div>
         </div>
 
-        <p className="text-sm text-slate-600 leading-relaxed">
+        <p className="text-sm text-[#1a1a1a]/65 leading-relaxed">
           {cloudVaultAvailable
             ? `Found your encrypted cloud vault for ${googleUser?.email ?? 'your Google account'}. Enter your vault passphrase to open it in this browser.`
             : 'All connected app insights, IRCTC tickets, cash logs, and daily summaries remain encrypted. Enter your vault passphrase to unlock.'}
@@ -93,13 +93,13 @@ export function VaultLockScreen({
           <div>
             <label
               htmlFor="unlock-passphrase"
-              className="block text-xs font-medium text-slate-700 mb-1.5"
+              className="block font-mono text-[10px] uppercase tracking-[0.12em] text-[#1a1a1a]/60 mb-1.5"
             >
               Vault Passphrase
             </label>
             <div className="relative">
               <KeyRound
-                className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                className="w-4 h-4 text-[#1a1a1a]/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
                 aria-hidden="true"
               />
               <input
@@ -110,9 +110,9 @@ export function VaultLockScreen({
                   setPassphrase(e.target.value);
                   setError(null);
                 }}
-                placeholder="Enter vault passphrase"
+                placeholder="Passphrase required for decryption"
                 autoFocus
-                className="w-full pl-9 pr-3 py-2.5 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700"
+                className="w-full pl-10 pr-4 py-3 text-sm bg-[#fafafa] border border-[#1a1a1a]/12 rounded-2xl text-[#1a1a1a] focus:outline-none focus:ring-2 focus:ring-[#0f766e]/20 focus:border-[#0f766e]"
               />
             </div>
             {error && (
@@ -125,7 +125,7 @@ export function VaultLockScreen({
           <button
             type="submit"
             disabled={isDecrypting}
-            className="w-full py-2.5 px-4 text-sm font-medium text-white bg-teal-700 hover:bg-teal-800 disabled:opacity-50 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
+            className="w-full py-3.5 px-4 font-mono text-xs uppercase tracking-[0.1em] font-medium text-white bg-[#1a1a1a] hover:bg-[#0f766e] disabled:opacity-50 rounded-2xl transition-colors inline-flex items-center justify-center gap-2"
           >
             <ShieldCheck className="w-4 h-4" aria-hidden="true" />
             <span>

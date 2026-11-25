@@ -1856,7 +1856,7 @@ export default function App() {
   ).pendingCount;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-[#f2efeb] text-[#1a1a1a] flex">
       <Sidebar
         activeSection={activeSection}
         onNavigate={(section) => {
@@ -1880,28 +1880,30 @@ export default function App() {
 
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Top Header Bar */}
-        <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-30">
+        <header className="h-16 bg-[#f2efeb]/95 backdrop-blur-xs border-b border-[#1a1a1a]/10 px-4 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-30">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
               onClick={() => setIsMobileNavOpen(true)}
               aria-label="Open navigation menu"
-              className="lg:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              className="lg:hidden p-2 rounded-lg text-[#1a1a1a]/70 hover:text-[#1a1a1a] hover:bg-white/70"
             >
               <Menu className="w-5 h-5" aria-hidden="true" />
             </button>
 
-            <div className="flex items-center gap-2 text-sm min-w-0">
-              <span className="text-slate-400 hidden sm:inline">SpendVault</span>
-              <span className="text-slate-300 hidden sm:inline" aria-hidden="true">
+            <div className="flex items-center gap-2.5 text-sm min-w-0">
+              <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#1a1a1a]/50 hidden sm:inline">
+                SpendVault
+              </span>
+              <span className="text-[#1a1a1a]/25 hidden sm:inline" aria-hidden="true">
                 /
               </span>
-              <h1 className="font-semibold text-slate-900 truncate">
+              <h1 className="font-serif text-xl font-semibold text-[#1a1a1a] truncate">
                 {SECTION_TITLES[activeSection]}
               </h1>
             </div>
 
-            <div className="hidden md:block pl-3 border-l border-slate-200">
+            <div className="hidden md:block pl-3 border-l border-[#1a1a1a]/12">
               <label htmlFor="header-month-select" className="sr-only">
                 Select month
               </label>
@@ -1909,7 +1911,7 @@ export default function App() {
                 id="header-month-select"
                 value={selectedMonth}
                 onChange={(e) => handleSelectMonth(e.target.value)}
-                className="text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700"
+                className="text-xs font-medium text-[#1a1a1a] bg-white border border-[#1a1a1a]/12 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/20 focus:border-[#0f766e]"
               >
                 {availableMonths.map((m) => (
                   <option key={m} value={m}>
@@ -1929,16 +1931,16 @@ export default function App() {
                 onClick={() => setCreateVaultModal({ open: true, mode: 'create' })}
                 aria-label="Create personal encrypted vault"
                 data-testid="header-create-vault-box"
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-teal-900 bg-teal-50 border border-teal-200 hover:bg-teal-100 rounded-lg transition-colors whitespace-nowrap shrink-0"
+                className="inline-flex items-center gap-1.5 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.06em] font-medium text-[#0f766e] bg-white border border-[#0f766e]/25 hover:bg-teal-50 rounded-xl transition-colors whitespace-nowrap shrink-0"
               >
-                <PlusCircle className="w-3.5 h-3.5 text-teal-700" aria-hidden="true" />
+                <PlusCircle className="w-3.5 h-3.5 text-[#0f766e]" aria-hidden="true" />
                 <span className="hidden sm:inline">Create Vault</span>
               </button>
               <button
                 type="button"
                 onClick={handleLockVault}
                 aria-label="Lock encrypted vault"
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap shrink-0"
+                className="inline-flex items-center gap-1.5 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.06em] font-medium text-[#1a1a1a]/80 bg-white border border-[#1a1a1a]/12 hover:bg-[#e8e3dc] rounded-xl transition-colors whitespace-nowrap shrink-0"
               >
                 <Lock className="w-3.5 h-3.5" aria-hidden="true" />
                 <span className="hidden sm:inline">Lock Vault</span>
@@ -1947,7 +1949,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => openAddExpenseModal('default')}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition-colors whitespace-nowrap shrink-0"
+              className="inline-flex items-center gap-1.5 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.08em] font-medium text-white bg-[#1a1a1a] hover:bg-[#0f766e] rounded-xl transition-colors whitespace-nowrap shrink-0"
             >
               <Plus className="w-4 h-4" aria-hidden="true" />
               <span>Add Expense</span>

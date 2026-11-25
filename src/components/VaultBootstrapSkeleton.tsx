@@ -13,7 +13,7 @@ export function VaultBootstrapSkeleton({
       aria-live="polite"
       aria-busy="true"
       data-testid="vault-bootstrap-skeleton"
-      className="min-h-screen bg-slate-50 flex relative overflow-hidden"
+      className="min-h-screen bg-[#f2efeb] flex relative overflow-hidden"
     >
       {/* Subtle pulsing sidebar skeleton (desktop) */}
       <aside
@@ -101,8 +101,8 @@ export function VaultBootstrapSkeleton({
       </div>
 
       {/* Centered elevated vault decryption status card */}
-      <div className="fixed inset-0 flex items-center justify-center p-6 bg-slate-50/55 backdrop-blur-[2px]">
-        <div className="w-full max-w-sm bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+      <div className="fixed inset-0 flex items-center justify-center p-6 bg-[#f2efeb]/65 backdrop-blur-[2px]">
+        <div className="w-full max-w-sm bg-white border border-[#1a1a1a]/10 rounded-3xl p-6 shadow-[0_24px_50px_-20px_rgba(26,26,26,0.1)] space-y-4">
           <div className="flex items-center gap-3.5">
             <span className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 border border-teal-200 text-teal-700 shrink-0">
               <span

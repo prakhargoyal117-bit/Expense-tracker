@@ -162,51 +162,51 @@ export function HomeMenuView({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
-      {/* Strict 3-Zone Top Bar */}
-      <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-xs border-b border-slate-200">
-        <div className="max-w-6xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-8">
+    <div className="min-h-screen bg-[#f2efeb] text-[#1a1a1a] flex flex-col">
+      {/* Strict 3-Zone Editorial Top Bar */}
+      <header className="sticky top-0 z-30 bg-[#f2efeb]/95 backdrop-blur-xs border-b border-[#1a1a1a]/10">
+        <div className="max-w-[1360px] mx-auto px-5 sm:px-8 lg:px-10 h-20 flex items-center justify-between gap-8">
           <a
             href="/"
             onClick={(e) => {
               e.preventDefault();
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className="inline-flex items-center gap-2.5 whitespace-nowrap shrink-0"
+            className="inline-flex items-center gap-3 whitespace-nowrap shrink-0"
           >
             <SpendVaultLogo size={32} />
-            <span className="text-[17px] font-bold tracking-tight text-slate-900">
+            <span className="font-serif italic text-[1.8rem] font-semibold leading-none tracking-[-0.01em] text-[#1a1a1a]">
               SpendVault
             </span>
           </a>
 
           <nav
             aria-label="Home menu navigation"
-            className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600"
+            className="hidden md:flex items-center gap-9 font-mono text-[11px] uppercase tracking-[0.12em] text-[#1a1a1a]/60"
           >
             <a
               href="#why-spendvault"
-              className="hover:text-slate-900 transition-colors whitespace-nowrap shrink-0"
+              className="hover:text-[#1a1a1a] transition-colors whitespace-nowrap shrink-0"
             >
-              Why SpendVault
+              The Problem
             </a>
             <a
               href="#capabilities"
-              className="hover:text-slate-900 transition-colors whitespace-nowrap shrink-0"
+              className="hover:text-[#1a1a1a] transition-colors whitespace-nowrap shrink-0"
             >
               Capabilities
             </a>
             <a
               href="#developers"
-              className="hover:text-slate-900 transition-colors whitespace-nowrap shrink-0"
+              className="hover:text-[#1a1a1a] transition-colors whitespace-nowrap shrink-0"
             >
-              Developers
+              Engineering
             </a>
             <a
               href="/privacy.html"
-              className="hover:text-slate-900 transition-colors whitespace-nowrap shrink-0"
+              className="hover:text-[#1a1a1a] transition-colors whitespace-nowrap shrink-0"
             >
-              Privacy Policy
+              Privacy
             </a>
           </nav>
 
@@ -219,12 +219,12 @@ export function HomeMenuView({
                   ? onContinueToInsideMenu
                   : scrollToAccessHub
               }
-              className="px-4 py-2 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition-colors whitespace-nowrap shrink-0"
+              className="px-5 py-2.5 rounded-full bg-[#0f766e] hover:bg-[#115e59] text-white font-mono text-[11px] uppercase tracking-[0.12em] font-medium transition-colors whitespace-nowrap shrink-0"
             >
               {accessState.gmailStep === 'unlocked_ready' ||
               accessState.vaultStep === 'unlocked_ready'
                 ? 'Open Inside Menu'
-                : 'Unlock Workspace'}
+                : 'Unlock'}
             </button>
           </div>
         </div>
@@ -232,50 +232,54 @@ export function HomeMenuView({
 
       {/* Main Content */}
       <main className="flex-1">
-        {/* Hero & Dual Access Portal */}
+        {/* Hero & Editorial Auth Panel */}
         <section
           aria-label="SpendVault Home Menu and Access Portal"
-          className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-14 lg:pt-16 lg:pb-20"
+          className="max-w-[1360px] mx-auto px-5 sm:px-8 lg:px-10 pt-12 pb-16 lg:pt-20 lg:pb-24"
         >
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-stretch">
-            {/* Left Column: Clear Purpose & Value Proposition */}
-            <div className="lg:col-span-7 flex flex-col justify-center space-y-6">
-              <p className="text-xs font-semibold text-teal-800 tracking-normal">
-                Personal Finance · IRCTC Rail Tracker · AES-256-GCM Encrypted Vault
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+            {/* Left Column: Editorial Headline & Value Proposition */}
+            <div className="lg:col-span-7 flex flex-col justify-center space-y-7">
+              <p className="font-mono text-[11px] uppercase tracking-[0.2em] font-medium text-[#0f766e]">
+                The Visibility Gap Solution
               </p>
 
               <h1
-                className="font-bold tracking-tight text-slate-900 leading-[1.12]"
+                className="font-serif font-semibold tracking-[-0.025em] text-[#1a1a1a] leading-[1.04]"
                 style={{
-                  fontSize: 'clamp(2.1rem, 3.6vw, 3.2rem)',
+                  fontSize: 'clamp(2.85rem, 4.9vw, 4.75rem)',
                   textWrap: 'balance',
                 }}
               >
-                Track every closed-API shopping app, UPI payment, and IRCTC ticket in one private vault.
+                Automated tracking for the Indian shopping ecosystem.
               </h1>
 
-              <p className="text-base text-slate-600 leading-relaxed max-w-2xl">
-                Shopping, food, and travel apps do not offer public APIs to export your spending.
-                SpendVault solves this by syncing the official order receipts these apps already
-                send to your Gmail—alongside FamPay, Navi UPI, PhonePe, Google Pay, Paytm, IRCTC
-                tickets, and cash spends—all encrypted inside your browser with AES-256-GCM.
+              <p className="text-base sm:text-[1.08rem] text-[#1a1a1a]/65 leading-relaxed max-w-[580px]">
+                Private AES-256-GCM encrypted expense tracker for closed-API shopping apps,
+                IRCTC train tickets, food apps, UPI receipts (Google Pay, PhonePe, Paytm,
+                FamPay, Navi UPI), recurring bills, and cash spends. Syncing the official
+                order receipts already in your Gmail.
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 max-w-2xl">
-                <div className="border-t border-slate-200 pt-3.5">
-                  <p className="text-sm font-semibold text-slate-900">
-                    Google / Gmail Login + Inside Password
+              <p className="font-mono text-[11px] text-[#1a1a1a]/60 tracking-[0.06em]">
+                Cross-browser encrypted sync · AES-256-GCM Web Crypto · Zero merchant APIs required
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-3 max-w-[600px]">
+                <div className="border-t border-[#1a1a1a]/12 pt-4">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.1em] font-medium text-[#1a1a1a]">
+                    Gmail Login + Inside Password
                   </p>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  <p className="text-xs text-[#1a1a1a]/65 mt-1.5 leading-relaxed">
                     Sign in with any Google account to sync across Brave, Chrome, and mobile,
                     protected by your personal Inside Menu password.
                   </p>
                 </div>
-                <div className="border-t border-slate-200 pt-3.5">
-                  <p className="text-sm font-semibold text-slate-900">
+                <div className="border-t border-[#1a1a1a]/12 pt-4">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.1em] font-medium text-[#1a1a1a]">
                     Direct Vault Key Access
                   </p>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  <p className="text-xs text-[#1a1a1a]/65 mt-1.5 leading-relaxed">
                     Prefer no cloud account? Create a local encrypted vault and unlock the
                     inside menu directly with your personal Vault Key.
                   </p>
@@ -283,19 +287,19 @@ export function HomeMenuView({
               </div>
             </div>
 
-            {/* Right Column: Dual-Mode Access Hub */}
+            {/* Right Column: Elevated White Editorial Auth Panel */}
             <div
               id="access-portal"
               data-testid="home-access-portal"
-              className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-6 sm:p-7 flex flex-col justify-between"
+              className="lg:col-span-5 bg-white rounded-[2rem] p-7 sm:p-10 shadow-[0_40px_80px_-20px_rgba(26,26,26,0.08)] border border-[#1a1a1a]/[0.06] flex flex-col justify-between"
             >
-              <div className="space-y-5">
+              <div className="space-y-6">
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">
-                    Enter Inside Menu
+                  <h2 className="font-serif text-[2rem] font-semibold leading-tight text-[#1a1a1a]">
+                    Inside Menu Access
                   </h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Choose how you want to open your SpendVault workspace.
+                  <p className="text-xs text-[#1a1a1a]/60 mt-1">
+                    Choose your unlock method to decrypt and enter SpendVault.
                   </p>
                 </div>
 
@@ -303,7 +307,7 @@ export function HomeMenuView({
                 <div
                   role="tablist"
                   aria-label="Workspace unlock method"
-                  className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-lg"
+                  className="grid grid-cols-2 gap-1 p-1 bg-[#f2efeb] rounded-2xl"
                 >
                   <button
                     type="button"
@@ -314,10 +318,10 @@ export function HomeMenuView({
                       setActiveTab('gmail');
                       setVaultError(null);
                     }}
-                    className={`px-3 py-2 text-xs font-semibold rounded-md transition-colors whitespace-nowrap ${
+                    className={`px-3 py-2.5 font-mono text-[11px] uppercase tracking-[0.06em] font-medium rounded-xl transition-all whitespace-nowrap ${
                       activeTab === 'gmail'
-                        ? 'bg-white text-slate-900 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-white text-[#1a1a1a] shadow-[0_4px_12px_rgba(0,0,0,0.05)]'
+                        : 'text-[#1a1a1a]/60 hover:text-[#1a1a1a]'
                     }`}
                   >
                     Google / Gmail
@@ -331,10 +335,10 @@ export function HomeMenuView({
                       setActiveTab('vault');
                       setGmailError(null);
                     }}
-                    className={`px-3 py-2 text-xs font-semibold rounded-md transition-colors whitespace-nowrap ${
+                    className={`px-3 py-2.5 font-mono text-[11px] uppercase tracking-[0.06em] font-medium rounded-xl transition-all whitespace-nowrap ${
                       activeTab === 'vault'
-                        ? 'bg-white text-slate-900 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-white text-[#1a1a1a] shadow-[0_4px_12px_rgba(0,0,0,0.05)]'
+                        : 'text-[#1a1a1a]/60 hover:text-[#1a1a1a]'
                     }`}
                   >
                     Vault Key
@@ -344,7 +348,7 @@ export function HomeMenuView({
                 {cloudStatus && (
                   <p
                     role="status"
-                    className="text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5"
+                    className="text-xs font-medium text-[#1a1a1a]/80 bg-[#f2efeb] border border-[#1a1a1a]/10 rounded-xl px-4 py-3"
                   >
                     {cloudStatus}
                   </p>
@@ -352,18 +356,18 @@ export function HomeMenuView({
 
                 {isBootstrapping ? (
                   <div className="py-6 space-y-3" aria-live="polite">
-                    <div className="h-4 w-40 bg-slate-200/80 rounded animate-pulse" />
-                    <div className="h-10 w-full bg-slate-100 rounded-lg animate-pulse" />
-                    <div className="h-10 w-full bg-slate-200/70 rounded-lg animate-pulse" />
+                    <div className="h-4 w-40 bg-[#f2efeb] rounded animate-pulse" />
+                    <div className="h-12 w-full bg-[#f2efeb] rounded-xl animate-pulse" />
+                    <div className="h-12 w-full bg-[#f2efeb] rounded-xl animate-pulse" />
                   </div>
                 ) : activeTab === 'gmail' ? (
                   /* ==================== GMAIL / GOOGLE TAB ==================== */
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     {accessState.gmailStep === 'sign_in' && (
                       <>
-                        <p className="text-xs text-slate-600 leading-relaxed">
+                        <p className="text-xs text-[#1a1a1a]/65 leading-relaxed">
                           Step 1: Sign in with your Google / Gmail account. Step 2: Enter or
-                          create your personal <strong>Inside Menu Password</strong> to open
+                          create your personal <strong className="text-[#1a1a1a]">Inside Menu Password</strong> to open
                           your encrypted dashboard.
                         </p>
 
@@ -386,7 +390,7 @@ export function HomeMenuView({
                                 type="button"
                                 disabled={isRedirectingGoogle}
                                 onClick={() => void onGoogleRedirectSignIn()}
-                                className="px-3.5 py-2 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-50 rounded-lg transition-colors"
+                                className="px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.08em] text-white bg-[#1a1a1a] hover:bg-[#0f766e] disabled:opacity-50 rounded-xl transition-colors"
                               >
                                 Try Redirect Sign-In
                               </button>
@@ -395,7 +399,7 @@ export function HomeMenuView({
                               <button
                                 type="button"
                                 onClick={onCancelGoogleSignIn}
-                                className="px-3.5 py-2 text-xs font-medium text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors"
+                                className="px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.08em] text-[#1a1a1a] bg-[#f2efeb] hover:bg-[#e6e1da] rounded-xl transition-colors"
                               >
                                 Cancel
                               </button>
@@ -403,7 +407,7 @@ export function HomeMenuView({
                           </div>
                         </div>
 
-                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                        <p className="text-[11px] text-[#1a1a1a]/55 leading-relaxed">
                           Open to every Google account. Basic sign-in syncs your encrypted
                           vault without requesting Gmail inbox permissions.
                         </p>
@@ -411,25 +415,25 @@ export function HomeMenuView({
                     )}
 
                     {accessState.gmailStep !== 'sign_in' && googleUser && (
-                      <div className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex items-center justify-between gap-3 bg-[#f2efeb] rounded-2xl p-3.5">
+                        <div className="flex items-center gap-3 min-w-0">
                           {googleUser.photoURL ? (
                             <img
                               src={googleUser.photoURL}
                               alt={googleUser.displayName ?? 'Google user'}
                               referrerPolicy="no-referrer"
-                              className="w-8 h-8 rounded-lg object-cover border border-slate-200 shrink-0"
+                              className="w-10 h-10 rounded-xl object-cover shrink-0"
                             />
                           ) : (
-                            <span className="w-8 h-8 rounded-lg bg-teal-700 text-white text-xs font-semibold flex items-center justify-center shrink-0">
+                            <span className="w-10 h-10 rounded-xl bg-[#0f766e] text-white text-xs font-semibold flex items-center justify-center shrink-0">
                               {(googleUser.email?.[0] ?? 'G').toUpperCase()}
                             </span>
                           )}
                           <div className="min-w-0">
-                            <p className="text-xs font-semibold text-slate-900 truncate">
+                            <p className="text-sm font-semibold text-[#1a1a1a] truncate">
                               {googleUser.displayName ?? 'Google Account'}
                             </p>
-                            <p className="text-[11px] text-slate-500 truncate">
+                            <p className="text-[11px] text-[#1a1a1a]/60 truncate">
                               {googleUser.email}
                             </p>
                           </div>
@@ -437,7 +441,7 @@ export function HomeMenuView({
                         <button
                           type="button"
                           onClick={() => void onGoogleSignOut()}
-                          className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 hover:text-slate-900 shrink-0"
+                          className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.08em] text-[#1a1a1a]/65 hover:text-[#1a1a1a] shrink-0"
                         >
                           <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
                           <span>Sign out</span>
@@ -448,25 +452,24 @@ export function HomeMenuView({
                     {accessState.gmailStep === 'create_password' && (
                       <form
                         onSubmit={handleGmailCreatePassword}
-                        className="space-y-3.5"
+                        className="space-y-4"
                         data-testid="home-gmail-create-password-form"
                       >
-                        <p className="text-xs text-slate-600 leading-relaxed">
-                          Create an <strong>Inside Menu Password</strong> for this Gmail
-                          account. You will use this password to unlock your dashboard on any
-                          browser.
+                        <p className="text-xs text-[#1a1a1a]/65 leading-relaxed">
+                          Create an <strong className="text-[#1a1a1a]">Inside Menu Password</strong> for this Gmail
+                          account to decrypt your dashboard on any browser.
                         </p>
 
                         <div>
                           <label
                             htmlFor="home-gmail-new-password"
-                            className="block text-xs font-medium text-slate-700 mb-1"
+                            className="block font-mono text-[10px] uppercase tracking-[0.12em] text-[#1a1a1a]/60 mb-1.5"
                           >
                             Inside Menu Password
                           </label>
                           <div className="relative">
                             <Lock
-                              className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                              className="w-4 h-4 text-[#1a1a1a]/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
                               aria-hidden="true"
                             />
                             <input
@@ -479,7 +482,7 @@ export function HomeMenuView({
                                 setGmailError(null);
                               }}
                               placeholder="Minimum 6 characters"
-                              className="w-full pl-9 pr-3 py-2.5 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700"
+                              className="w-full pl-10 pr-4 py-3.5 text-sm bg-[#fafafa] border border-[#1a1a1a]/12 rounded-2xl text-[#1a1a1a] focus:outline-none focus:ring-2 focus:ring-[#0f766e]/20 focus:border-[#0f766e]"
                             />
                           </div>
                         </div>
@@ -487,7 +490,7 @@ export function HomeMenuView({
                         <div>
                           <label
                             htmlFor="home-gmail-confirm-password"
-                            className="block text-xs font-medium text-slate-700 mb-1"
+                            className="block font-mono text-[10px] uppercase tracking-[0.12em] text-[#1a1a1a]/60 mb-1.5"
                           >
                             Confirm Password
                           </label>
@@ -501,7 +504,7 @@ export function HomeMenuView({
                               setGmailError(null);
                             }}
                             placeholder="Re-enter inside menu password"
-                            className="w-full px-3 py-2.5 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700"
+                            className="w-full px-4 py-3.5 text-sm bg-[#fafafa] border border-[#1a1a1a]/12 rounded-2xl text-[#1a1a1a] focus:outline-none focus:ring-2 focus:ring-[#0f766e]/20 focus:border-[#0f766e]"
                           />
                         </div>
 
@@ -515,12 +518,12 @@ export function HomeMenuView({
                           type="submit"
                           disabled={isSubmittingGmail}
                           data-testid="home-gmail-save-password-btn"
-                          className="w-full py-2.5 px-4 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-800 disabled:opacity-50 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
+                          className="w-full py-3.5 px-4 font-mono text-xs uppercase tracking-[0.1em] font-medium text-white bg-[#1a1a1a] hover:bg-[#0f766e] disabled:opacity-50 rounded-2xl transition-colors inline-flex items-center justify-center gap-2"
                         >
                           <span>
                             {isSubmittingGmail
                               ? 'Encrypting & Opening...'
-                              : 'Save Password & Open Inside Menu'}
+                              : 'Save Password & Unlock'}
                           </span>
                           <ArrowRight className="w-4 h-4" aria-hidden="true" />
                         </button>
@@ -530,24 +533,19 @@ export function HomeMenuView({
                     {accessState.gmailStep === 'enter_password' && (
                       <form
                         onSubmit={handleGmailEnterPassword}
-                        className="space-y-3.5"
+                        className="space-y-4"
                         data-testid="home-gmail-unlock-form"
                       >
-                        <p className="text-xs text-slate-600 leading-relaxed">
-                          Enter your <strong>Inside Menu Password</strong> to decrypt and open
-                          your synced SpendVault workspace.
-                        </p>
-
                         <div>
                           <label
                             htmlFor="home-gmail-password"
-                            className="block text-xs font-medium text-slate-700 mb-1"
+                            className="block font-mono text-[10px] uppercase tracking-[0.12em] text-[#1a1a1a]/60 mb-1.5"
                           >
                             Inside Menu Password
                           </label>
                           <div className="relative">
                             <Lock
-                              className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                              className="w-4 h-4 text-[#1a1a1a]/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
                               aria-hidden="true"
                             />
                             <input
@@ -559,9 +557,9 @@ export function HomeMenuView({
                                 setGmailPassword(e.target.value);
                                 setGmailError(null);
                               }}
-                              placeholder="Enter your inside menu password"
+                              placeholder="Passphrase required for decryption"
                               autoFocus
-                              className="w-full pl-9 pr-3 py-2.5 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700"
+                              className="w-full pl-10 pr-4 py-3.5 text-sm bg-[#fafafa] border border-[#1a1a1a]/12 rounded-2xl text-[#1a1a1a] focus:outline-none focus:ring-2 focus:ring-[#0f766e]/20 focus:border-[#0f766e]"
                             />
                           </div>
                           {gmailError && (
@@ -575,13 +573,13 @@ export function HomeMenuView({
                           type="submit"
                           disabled={isSubmittingGmail}
                           data-testid="home-gmail-unlock-btn"
-                          className="w-full py-2.5 px-4 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-800 disabled:opacity-50 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
+                          className="w-full py-3.5 px-4 font-mono text-xs uppercase tracking-[0.1em] font-medium text-white bg-[#1a1a1a] hover:bg-[#0f766e] disabled:opacity-50 rounded-2xl transition-colors inline-flex items-center justify-center gap-2"
                         >
                           <ShieldCheck className="w-4 h-4" aria-hidden="true" />
                           <span>
                             {isSubmittingGmail
                               ? 'Verifying Password...'
-                              : 'Verify Password & Open Inside Menu'}
+                              : 'Verify & Unlock Workspace'}
                           </span>
                         </button>
                       </form>
@@ -589,7 +587,7 @@ export function HomeMenuView({
 
                     {accessState.gmailStep === 'unlocked_ready' && (
                       <div className="space-y-3">
-                        <p className="text-xs text-slate-600 leading-relaxed">
+                        <p className="text-xs text-[#1a1a1a]/65 leading-relaxed">
                           Your Gmail-synced vault is unlocked for this session. Continue to
                           the inside menu or lock it to require your password again.
                         </p>
@@ -597,7 +595,7 @@ export function HomeMenuView({
                           type="button"
                           onClick={onContinueToInsideMenu}
                           data-testid="home-continue-inside-btn"
-                          className="w-full py-2.5 px-4 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
+                          className="w-full py-3.5 px-4 font-mono text-xs uppercase tracking-[0.1em] font-medium text-white bg-[#1a1a1a] hover:bg-[#0f766e] rounded-2xl transition-colors inline-flex items-center justify-center gap-2"
                         >
                           <span>Continue to Inside Menu</span>
                           <ArrowRight className="w-4 h-4" aria-hidden="true" />
@@ -605,7 +603,7 @@ export function HomeMenuView({
                         <button
                           type="button"
                           onClick={onLockVault}
-                          className="w-full py-2 px-4 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors inline-flex items-center justify-center gap-1.5"
+                          className="w-full py-2.5 px-4 font-mono text-[11px] uppercase tracking-[0.08em] text-[#1a1a1a]/80 bg-[#f2efeb] hover:bg-[#e7e2db] rounded-xl transition-colors inline-flex items-center justify-center gap-1.5"
                         >
                           <Lock className="w-3.5 h-3.5" aria-hidden="true" />
                           <span>Lock &amp; Require Password</span>
@@ -619,24 +617,24 @@ export function HomeMenuView({
                     {accessState.vaultStep === 'unlock_key' && (
                       <form
                         onSubmit={handleVaultKeyUnlock}
-                        className="space-y-3.5"
+                        className="space-y-4"
                         data-testid="home-vault-key-form"
                       >
-                        <p className="text-xs text-slate-600 leading-relaxed">
+                        <p className="text-xs text-[#1a1a1a]/65 leading-relaxed">
                           An encrypted personal vault is stored on this device. Enter its{' '}
-                          <strong>Vault Key</strong> to decrypt and open the inside menu.
+                          <strong className="text-[#1a1a1a]">Vault Key</strong> to decrypt and open the inside menu.
                         </p>
 
                         <div>
                           <label
                             htmlFor="home-vault-key-input"
-                            className="block text-xs font-medium text-slate-700 mb-1"
+                            className="block font-mono text-[10px] uppercase tracking-[0.12em] text-[#1a1a1a]/60 mb-1.5"
                           >
                             Vault Key
                           </label>
                           <div className="relative">
                             <KeyRound
-                              className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                              className="w-4 h-4 text-[#1a1a1a]/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
                               aria-hidden="true"
                             />
                             <input
@@ -650,7 +648,7 @@ export function HomeMenuView({
                               }}
                               placeholder="Enter your vault key"
                               autoFocus
-                              className="w-full pl-9 pr-3 py-2.5 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-700/20 focus:border-teal-700"
+                              className="w-full pl-10 pr-4 py-3.5 text-sm bg-[#fafafa] border border-[#1a1a1a]/12 rounded-2xl text-[#1a1a1a] focus:outline-none focus:ring-2 focus:ring-[#0f766e]/20 focus:border-[#0f766e]"
                             />
                           </div>
                           {vaultError && (
@@ -664,7 +662,7 @@ export function HomeMenuView({
                           type="submit"
                           disabled={isSubmittingVault}
                           data-testid="home-vault-unlock-btn"
-                          className="w-full py-2.5 px-4 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-800 disabled:opacity-50 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
+                          className="w-full py-3.5 px-4 font-mono text-xs uppercase tracking-[0.1em] font-medium text-white bg-[#1a1a1a] hover:bg-[#0f766e] disabled:opacity-50 rounded-2xl transition-colors inline-flex items-center justify-center gap-2"
                         >
                           <KeyRound className="w-4 h-4" aria-hidden="true" />
                           <span>
@@ -678,7 +676,7 @@ export function HomeMenuView({
 
                     {accessState.vaultStep === 'unlocked_ready' && (
                       <div className="space-y-3">
-                        <p className="text-xs text-slate-600 leading-relaxed">
+                        <p className="text-xs text-[#1a1a1a]/65 leading-relaxed">
                           Your encrypted personal vault is currently unlocked in this browser
                           session.
                         </p>
@@ -686,7 +684,7 @@ export function HomeMenuView({
                           type="button"
                           onClick={onContinueToInsideMenu}
                           data-testid="home-vault-continue-btn"
-                          className="w-full py-2.5 px-4 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
+                          className="w-full py-3.5 px-4 font-mono text-xs uppercase tracking-[0.1em] font-medium text-white bg-[#1a1a1a] hover:bg-[#0f766e] rounded-2xl transition-colors inline-flex items-center justify-center gap-2"
                         >
                           <span>Open Inside Menu</span>
                           <ArrowRight className="w-4 h-4" aria-hidden="true" />
@@ -694,7 +692,7 @@ export function HomeMenuView({
                         <button
                           type="button"
                           onClick={onLockVault}
-                          className="w-full py-2 px-4 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors inline-flex items-center justify-center gap-1.5"
+                          className="w-full py-2.5 px-4 font-mono text-[11px] uppercase tracking-[0.08em] text-[#1a1a1a]/80 bg-[#f2efeb] hover:bg-[#e7e2db] rounded-xl transition-colors inline-flex items-center justify-center gap-1.5"
                         >
                           <Lock className="w-3.5 h-3.5" aria-hidden="true" />
                           <span>Lock Vault &amp; Require Key</span>
@@ -704,9 +702,9 @@ export function HomeMenuView({
 
                     {accessState.vaultStep === 'setup_or_open' && (
                       <div className="space-y-3">
-                        <p className="text-xs text-slate-600 leading-relaxed">
+                        <p className="text-xs text-[#1a1a1a]/65 leading-relaxed">
                           Create a private AES-256-GCM vault protected by your own{' '}
-                          <strong>Vault Key</strong>, restore an encrypted backup file, or
+                          <strong className="text-[#1a1a1a]">Vault Key</strong>, restore an encrypted backup file, or
                           explore a local workspace right away.
                         </p>
 
@@ -714,17 +712,17 @@ export function HomeMenuView({
                           type="button"
                           data-testid="home-create-vault-btn"
                           onClick={() => onOpenCreateVault('create')}
-                          className="w-full py-2.5 px-4 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
+                          className="w-full py-3.5 px-4 font-mono text-xs uppercase tracking-[0.1em] font-medium text-white bg-[#1a1a1a] hover:bg-[#0f766e] rounded-2xl transition-colors inline-flex items-center justify-center gap-2"
                         >
                           <PlusCircle className="w-4 h-4" aria-hidden="true" />
-                          <span>Create Personal Vault with Key</span>
+                          <span>Create Personal Vault</span>
                         </button>
 
                         <button
                           type="button"
                           data-testid="home-open-local-workspace-btn"
                           onClick={() => void onOpenLocalWorkspace()}
-                          className="w-full py-2.5 px-4 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
+                          className="w-full py-3 px-4 font-mono text-[11px] uppercase tracking-[0.08em] font-medium text-[#1a1a1a] bg-[#f2efeb] hover:bg-[#e7e2db] rounded-xl transition-colors inline-flex items-center justify-center gap-2"
                         >
                           <span>Open Local Workspace</span>
                           <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
@@ -732,11 +730,11 @@ export function HomeMenuView({
                       </div>
                     )}
 
-                    <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div className="pt-3.5 border-t border-[#1a1a1a]/10 flex flex-wrap items-center justify-between gap-2 text-xs">
                       <button
                         type="button"
                         onClick={() => onOpenCreateVault('create')}
-                        className="font-medium text-teal-800 hover:text-teal-950 inline-flex items-center gap-1"
+                        className="font-medium text-[#0f766e] hover:text-[#115e59] inline-flex items-center gap-1"
                       >
                         <PlusCircle className="w-3.5 h-3.5" aria-hidden="true" />
                         <span>New Vault Key</span>
@@ -744,7 +742,7 @@ export function HomeMenuView({
                       <button
                         type="button"
                         onClick={() => onOpenCreateVault('import')}
-                        className="font-medium text-slate-700 hover:text-slate-900 inline-flex items-center gap-1"
+                        className="font-medium text-[#1a1a1a]/70 hover:text-[#1a1a1a] inline-flex items-center gap-1"
                       >
                         <FileUp className="w-3.5 h-3.5" aria-hidden="true" />
                         <span>Restore Backup (.json)</span>
@@ -754,16 +752,61 @@ export function HomeMenuView({
                 )}
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px] text-slate-500">
+              <div className="mt-7 pt-4 border-t border-[#1a1a1a]/10 flex items-center justify-between gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-[#1a1a1a]/55">
                 <span>AES-256-GCM · Local Web Crypto</span>
                 <a
                   href="/privacy.html"
-                  className="font-medium text-teal-800 hover:underline"
+                  className="font-medium text-[#0f766e] hover:underline"
                 >
-                  Privacy Policy
+                  Privacy
                 </a>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* Capabilities 3-Column Editorial Feature Grid */}
+        <section
+          id="capabilities"
+          aria-label="SpendVault Core Capabilities"
+          className="scroll-mt-20 max-w-[1360px] mx-auto px-5 sm:px-8 lg:px-10"
+        >
+          <div className="border-t border-[#1a1a1a]/10 py-14 grid grid-cols-1 md:grid-cols-3 gap-10 lg:gap-12">
+            <article className="space-y-3">
+              <p className="font-mono text-[11px] font-medium text-[#0f766e]">[01]</p>
+              <h3 className="font-serif text-[1.65rem] font-semibold leading-snug text-[#1a1a1a]">
+                API-Independent
+              </h3>
+              <p className="text-sm text-[#1a1a1a]/65 leading-relaxed">
+                Because shopping apps like Amazon, Flipkart, Meesho, BigBasket, Zomato, and Swiggy
+                don&apos;t offer public APIs, SpendVault parses verified order receipts from Gmail
+                directly inside your browser while ignoring OTPs and promos.
+              </p>
+            </article>
+
+            <article className="space-y-3">
+              <p className="font-mono text-[11px] font-medium text-[#0f766e]">[02]</p>
+              <h3 className="font-serif text-[1.65rem] font-semibold leading-snug text-[#1a1a1a]">
+                Zero Plaintext
+              </h3>
+              <p className="text-sm text-[#1a1a1a]/65 leading-relaxed">
+                Every transaction record is encrypted with client-side Web Crypto (AES-256-GCM &amp;
+                PBKDF2-SHA256) before being stored locally or synced to Cloud Firestore. Your
+                password or Vault Key never leaves your device.
+              </p>
+            </article>
+
+            <article className="space-y-3">
+              <p className="font-mono text-[11px] font-medium text-[#0f766e]">[03]</p>
+              <h3 className="font-serif text-[1.65rem] font-semibold leading-snug text-[#1a1a1a]">
+                Unified Dashboard
+              </h3>
+              <p className="text-sm text-[#1a1a1a]/65 leading-relaxed">
+                Track IRCTC train tickets (PNR &amp; train numbers), Uber, Ola, Rapido, Ajio,
+                Nykaa, JioMart, and UPI apps like Google Pay, PhonePe, Paytm, FamPay, and Navi UPI
+                in a single Safe Daily Allowance ledger.
+              </p>
+            </article>
           </div>
         </section>
 
@@ -771,58 +814,58 @@ export function HomeMenuView({
         <section
           id="why-spendvault"
           aria-label="Why SpendVault Exists"
-          className="border-t border-slate-200 bg-white py-14 lg:py-16"
+          className="scroll-mt-20 border-t border-[#1a1a1a]/10 bg-white/70 py-16 lg:py-20"
         >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+          <div className="max-w-[1360px] mx-auto px-5 sm:px-8 lg:px-10 space-y-10">
             <div className="max-w-3xl space-y-3">
-              <p className="text-xs font-semibold text-teal-800">
+              <p className="font-mono text-[11px] uppercase tracking-[0.2em] font-medium text-[#0f766e]">
                 Main Motive · Closing the Multi-App Visibility Gap
               </p>
               <h2
-                className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 leading-tight"
+                className="font-serif text-3xl sm:text-[2.5rem] font-semibold tracking-[-0.02em] text-[#1a1a1a] leading-[1.08]"
                 style={{ textWrap: 'balance' }}
               >
                 Shopping apps don&apos;t open their APIs—so we turned your Gmail receipts into a unified expense tracker.
               </h2>
-              <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-                Today&apos;s daily spending is scattered across dozens of platforms—Amazon, Flipkart,
-                Meesho, BigBasket, JioMart, Ajio, Nykaa, Zomato, Swiggy, Blinkit, Zepto, Uber,
-                Ola, Rapido, and IRCTC. Because none of these apps expose a public API for personal
-                expense tracking, users are left guessing where their money went each month.
+              <p className="text-sm sm:text-base text-[#1a1a1a]/65 leading-relaxed">
+                Daily spending is scattered across dozens of walled apps—Amazon, Flipkart, Meesho,
+                BigBasket, JioMart, Ajio, Nykaa, Zomato, Swiggy, Blinkit, Zepto, Uber, Ola, Rapido,
+                and IRCTC. Because none of these apps expose a public API for personal expense
+                tracking, SpendVault turns the receipts already in your inbox into a private ledger.
               </p>
             </div>
 
             {/* Problem vs. Solution Contrast Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-              <article className="bg-slate-50 border border-slate-200 rounded-xl p-6 sm:p-7 flex flex-col justify-between gap-4">
-                <div className="space-y-2.5">
-                  <p className="text-xs font-semibold text-slate-500">
+              <article className="bg-white border border-[#1a1a1a]/10 rounded-3xl p-7 sm:p-8 flex flex-col justify-between gap-5">
+                <div className="space-y-3">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#1a1a1a]/55">
                     01. The Problem
                   </p>
-                  <h3 className="text-lg font-bold text-slate-900">
+                  <h3 className="font-serif text-2xl font-semibold text-[#1a1a1a]">
                     Closed ecosystems with zero public APIs
                   </h3>
-                  <p className="text-sm text-slate-600 leading-relaxed">
+                  <p className="text-sm text-[#1a1a1a]/65 leading-relaxed">
                     E-commerce, food delivery, grocery, and cab platforms lock your order history
-                    inside separate walled apps without public developer APIs. Bank statements only
-                    show cryptic UPI references, while manually logging every purchase quickly
-                    becomes exhausting and error-prone.
+                    inside separate apps without public developer APIs. Bank statements only show
+                    cryptic UPI references, while manually typing every purchase breaks down within
+                    days.
                   </p>
                 </div>
-                <p className="pt-4 border-t border-slate-200/80 text-xs text-slate-500">
+                <p className="pt-4 border-t border-[#1a1a1a]/10 font-mono text-[11px] text-[#1a1a1a]/55">
                   Fragmented order history · Cryptic bank SMS · No unified per-app breakdown
                 </p>
               </article>
 
-              <article className="bg-teal-950 text-white border border-teal-900 rounded-xl p-6 sm:p-7 flex flex-col justify-between gap-4">
-                <div className="space-y-2.5">
-                  <p className="text-xs font-semibold text-teal-300">
+              <article className="bg-[#1a1a1a] text-[#f2efeb] border border-[#1a1a1a] rounded-3xl p-7 sm:p-8 flex flex-col justify-between gap-5">
+                <div className="space-y-3">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-teal-300">
                     02. The SpendVault Solution
                   </p>
-                  <h3 className="text-lg font-bold text-white">
+                  <h3 className="font-serif text-2xl font-semibold text-white">
                     Automatic, privacy-first Gmail receipt syncing
                   </h3>
-                  <p className="text-sm text-teal-100/90 leading-relaxed">
+                  <p className="text-sm text-[#f2efeb]/80 leading-relaxed">
                     Every shopping, travel, and payment app already emails you an official order
                     confirmation or invoice. SpendVault connects via read-only Gmail sync to extract
                     only verified receipts directly inside your browser—automatically ignoring OTPs,
@@ -830,149 +873,38 @@ export function HomeMenuView({
                     AES-256-GCM.
                   </p>
                 </div>
-                <p className="pt-4 border-t border-teal-800/80 text-xs text-teal-200/90">
+                <p className="pt-4 border-t border-white/15 font-mono text-[11px] text-teal-200/90">
                   Works without merchant APIs · Zero plaintext servers · Full per-app analytics
                 </p>
               </article>
             </div>
 
-            {/* 3-Step Mechanism Strip */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-              <div className="border-t border-slate-200 pt-4 space-y-1.5">
-                <p className="text-xs font-mono tabular-nums font-semibold text-teal-800">
-                  Step 01
-                </p>
-                <h3 className="text-sm font-semibold text-slate-900">
-                  Apps send email &amp; UPI receipts
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Every order on Amazon, Meesho, BigBasket, Zomato, Swiggy, IRCTC, or UPI apps like
-                  FamPay and Navi UPI leaves an invoice or payment alert.
-                </p>
-              </div>
-              <div className="border-t border-slate-200 pt-4 space-y-1.5">
-                <p className="text-xs font-mono tabular-nums font-semibold text-teal-800">
-                  Step 02
-                </p>
-                <h3 className="text-sm font-semibold text-slate-900">
-                  Smart in-browser receipt filtering
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  SpendVault parses sender headers, exact totals, payment modes (Online vs. COD),
-                  and categories right on your device while discarding ads and OTPs.
-                </p>
-              </div>
-              <div className="border-t border-slate-200 pt-4 space-y-1.5">
-                <p className="text-xs font-mono tabular-nums font-semibold text-teal-800">
-                  Step 03
-                </p>
-                <h3 className="text-sm font-semibold text-slate-900">
-                  One encrypted personal dashboard
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Track daily budgets, Safe Daily Allowance, recurring bills, and per-app totals—all
-                  locked behind your personal password or Vault Key.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Capabilities Asymmetric Bento Grid */}
-        <section
-          id="capabilities"
-          aria-label="SpendVault Core Capabilities"
-          className="border-t border-slate-200 bg-slate-50 py-14 lg:py-16"
-        >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-            <div className="max-w-2xl">
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                Built for daily Indian personal finance
-              </h2>
-              <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
-                Track every rupee across shopping apps, UPI wallets, train tickets, recurring bills,
-                and cash expenses without giving up your financial privacy.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <article className="md:col-span-2 bg-white border border-slate-200 rounded-xl p-6 space-y-2.5">
-                <h3 className="text-base font-semibold text-slate-900">
-                  01. IRCTC Ticket &amp; Online Payment Receipt Reader
-                </h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  Paste IRCTC booking SMS alerts or Google Pay, PhonePe, Paytm, FamPay, Navi UPI,
-                  BHIM, and CRED debit receipts—or optionally connect read-only Gmail scanning.
-                  SpendVault extracts merchant, amount, PNR, and train numbers locally while
-                  ignoring OTPs, promotional messages, and incoming credits.
-                </p>
-              </article>
-
-              <article className="bg-white border border-slate-200 rounded-xl p-6 space-y-2.5">
-                <h3 className="text-base font-semibold text-slate-900">
-                  02. Client-Side AES-256-GCM
-                </h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  Your expenses are encrypted in-browser with PBKDF2-SHA256 before writing to
-                  local storage or syncing to Cloud Firestore. Your password or vault key
-                  never leaves your device.
-                </p>
-              </article>
-
-              <article className="bg-white border border-slate-200 rounded-xl p-6 space-y-2.5">
-                <h3 className="text-base font-semibold text-slate-900">
-                  03. Safe Daily Allowance &amp; Recurring Bills
-                </h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  Know exactly how much you can safely spend per remaining day in the month,
-                  and log rent, Wi-Fi, OTT, or commuter passes in one tap.
-                </p>
-              </article>
-
-              <article className="md:col-span-2 bg-white border border-slate-200 rounded-xl p-6 space-y-2.5">
-                <h3 className="text-base font-semibold text-slate-900">
-                  04. Complete Per-App &amp; Cash Analytics
-                </h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  Compare Online (UPI/Card) vs. Cash/COD spend day by day across Amazon, Flipkart,
-                  Meesho, BigBasket, JioMart, Ajio, Nykaa, Zomato, Swiggy, EatSure, Blinkit, Zepto,
-                  IRCTC, Uber, Ola, Rapido, and manual entries—with group split tracking and CSV
-                  export.
-                </p>
-              </article>
-            </div>
-          </div>
-        </section>
-
-        {/* How Access Works */}
-        <section
-          id="how-access-works"
-          aria-label="How SpendVault Access Works"
-          className="border-t border-slate-200 bg-white py-14"
-        >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 space-y-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                  <Cloud className="w-4 h-4 text-teal-700" aria-hidden="true" />
-                  <span>Option A: Gmail Sign-In + Inside Menu Password</span>
+            {/* Dual Access Explanation Strip */}
+            <div
+              id="how-access-works"
+              className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2"
+            >
+              <div className="border-t border-[#1a1a1a]/12 pt-5 space-y-2">
+                <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.1em] font-medium text-[#1a1a1a]">
+                  <Cloud className="w-3.5 h-3.5 text-[#0f766e]" aria-hidden="true" />
+                  <span>Option A · Gmail Sign-In + Inside Menu Password</span>
                 </div>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  Log in with any Google account, then enter your personal Inside Menu
-                  Password. Your encrypted vault stays synced across Brave, Chrome, and
-                  mobile—and nobody can open your inside dashboard without your password.
+                <p className="text-xs sm:text-sm text-[#1a1a1a]/65 leading-relaxed">
+                  Log in with any Google account, then enter your personal Inside Menu Password.
+                  Your encrypted vault stays synced across Brave, Chrome, and mobile—and nobody
+                  can open your inside dashboard without your password.
                 </p>
               </div>
 
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 space-y-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                  <KeyRound className="w-4 h-4 text-teal-700" aria-hidden="true" />
-                  <span>Option B: Personal Vault Opened by Vault Key</span>
+              <div className="border-t border-[#1a1a1a]/12 pt-5 space-y-2">
+                <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.1em] font-medium text-[#1a1a1a]">
+                  <KeyRound className="w-3.5 h-3.5 text-[#0f766e]" aria-hidden="true" />
+                  <span>Option B · Personal Vault Opened by Vault Key</span>
                 </div>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  Keep everything strictly offline on your device or restore an encrypted
-                  <code className="font-mono text-xs mx-1">.json</code> backup. Enter your
-                  Vault Key on the Home Menu to decrypt and enter immediately.
+                <p className="text-xs sm:text-sm text-[#1a1a1a]/65 leading-relaxed">
+                  Keep everything strictly offline on your device or restore an encrypted{' '}
+                  <code className="font-mono text-xs">.json</code> backup. Enter your Vault Key on
+                  the Home Menu to decrypt and enter immediately.
                 </p>
               </div>
             </div>
@@ -983,19 +915,19 @@ export function HomeMenuView({
         <section
           id="developers"
           aria-label="SpendVault Developers"
-          className="border-t border-slate-200 bg-slate-50 py-14 lg:py-16"
+          className="scroll-mt-20 border-t border-[#1a1a1a]/10 bg-[#f2efeb] py-16 lg:py-20"
         >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-            <div className="max-w-2xl space-y-2">
-              <p className="text-xs font-semibold text-teal-800">
-                Project Team · Coursework Showcase
+          <div className="max-w-[1360px] mx-auto px-5 sm:px-8 lg:px-10 space-y-8">
+            <div className="max-w-2xl space-y-2.5">
+              <p className="font-mono text-[11px] uppercase tracking-[0.2em] font-medium text-[#0f766e]">
+                Engineering · Coursework Showcase
               </p>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+              <h2 className="font-serif text-3xl sm:text-[2.25rem] font-semibold tracking-[-0.02em] text-[#1a1a1a]">
                 Developed By
               </h2>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Built as a practical, privacy-first solution to track personal expenses across
-                closed-API shopping, food, travel, and UPI apps using Gmail receipt syncing.
+              <p className="text-sm text-[#1a1a1a]/65 leading-relaxed">
+                Designed and engineered to give everyday shoppers and students complete visibility
+                over multi-app spending without sacrificing financial privacy.
               </p>
             </div>
 
@@ -1006,43 +938,51 @@ export function HomeMenuView({
               {/* Developer Box 1 */}
               <article
                 data-testid="developer-card-prakhar"
-                className="bg-white border border-slate-200 rounded-xl p-6 flex flex-col justify-between gap-6"
+                className="bg-white border border-[#1a1a1a]/10 rounded-3xl p-7 shadow-[0_24px_50px_-24px_rgba(26,26,26,0.08)] flex flex-col justify-between gap-6"
               >
                 <div className="flex items-start gap-4">
                   <div
                     aria-hidden="true"
-                    className="w-12 h-12 rounded-xl bg-teal-900 text-white font-bold text-base tracking-tight flex items-center justify-center shrink-0"
+                    className="w-12 h-12 rounded-2xl bg-[#0f766e] text-white font-serif italic font-semibold text-xl flex items-center justify-center shrink-0"
                   >
                     PG
                   </div>
                   <div className="min-w-0 flex-1 space-y-3">
                     <div>
-                      <p className="text-xs font-medium text-slate-500">Developer</p>
-                      <h3 className="text-lg font-bold text-slate-900 tracking-tight mt-0.5">
+                      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#1a1a1a]/50">
+                        Developer
+                      </p>
+                      <h3 className="font-serif text-2xl font-semibold text-[#1a1a1a] leading-tight mt-0.5">
                         Prakhar Goyal
                       </h3>
                     </div>
 
-                    <dl className="divide-y divide-slate-100 border-t border-slate-100 text-sm">
-                      <div className="py-2 flex items-center justify-between gap-4">
-                        <dt className="text-xs font-medium text-slate-500">Name</dt>
-                        <dd className="text-sm font-semibold text-slate-900 text-right">
+                    <dl className="divide-y divide-[#1a1a1a]/8 border-t border-[#1a1a1a]/8 text-sm">
+                      <div className="py-2.5 flex items-center justify-between gap-4">
+                        <dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-[#1a1a1a]/55">
+                          Name
+                        </dt>
+                        <dd className="text-sm font-semibold text-[#1a1a1a] text-right">
                           Prakhar Goyal
                         </dd>
                       </div>
-                      <div className="py-2 flex items-center justify-between gap-4">
-                        <dt className="text-xs font-medium text-slate-500">Scholar No.</dt>
-                        <dd className="text-sm font-mono tabular-nums font-semibold text-slate-900 text-right">
-                          263U010002
+                      <div className="py-2.5 flex items-center justify-between gap-4">
+                        <dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-[#1a1a1a]/55">
+                          Scholar No.
+                        </dt>
+                        <dd className="text-sm font-mono tabular-nums font-semibold text-[#1a1a1a] text-right">
+                          26U010002
                         </dd>
                       </div>
                     </dl>
                   </div>
                 </div>
 
-                <div className="pt-3.5 border-t border-slate-200 flex items-center justify-between gap-3">
-                  <span className="text-xs text-slate-500">Course Code</span>
-                  <span className="text-sm font-mono tabular-nums font-semibold text-teal-800">
+                <div className="pt-4 border-t border-[#1a1a1a]/10 flex items-center justify-between gap-3">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#1a1a1a]/55">
+                    Course Code
+                  </span>
+                  <span className="text-sm font-mono tabular-nums font-semibold text-[#0f766e]">
                     FoCP(1003)
                   </span>
                 </div>
@@ -1051,33 +991,39 @@ export function HomeMenuView({
               {/* Developer Box 2 */}
               <article
                 data-testid="developer-card-mridul"
-                className="bg-white border border-slate-200 rounded-xl p-6 flex flex-col justify-between gap-6"
+                className="bg-white border border-[#1a1a1a]/10 rounded-3xl p-7 shadow-[0_24px_50px_-24px_rgba(26,26,26,0.08)] flex flex-col justify-between gap-6"
               >
                 <div className="flex items-start gap-4">
                   <div
                     aria-hidden="true"
-                    className="w-12 h-12 rounded-xl bg-slate-900 text-white font-bold text-base tracking-tight flex items-center justify-center shrink-0"
+                    className="w-12 h-12 rounded-2xl bg-[#1a1a1a] text-white font-serif italic font-semibold text-xl flex items-center justify-center shrink-0"
                   >
                     MS
                   </div>
                   <div className="min-w-0 flex-1 space-y-3">
                     <div>
-                      <p className="text-xs font-medium text-slate-500">Developer</p>
-                      <h3 className="text-lg font-bold text-slate-900 tracking-tight mt-0.5">
+                      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#1a1a1a]/50">
+                        Developer
+                      </p>
+                      <h3 className="font-serif text-2xl font-semibold text-[#1a1a1a] leading-tight mt-0.5">
                         Mridul Sengar
                       </h3>
                     </div>
 
-                    <dl className="divide-y divide-slate-100 border-t border-slate-100 text-sm">
-                      <div className="py-2 flex items-center justify-between gap-4">
-                        <dt className="text-xs font-medium text-slate-500">Name</dt>
-                        <dd className="text-sm font-semibold text-slate-900 text-right">
+                    <dl className="divide-y divide-[#1a1a1a]/8 border-t border-[#1a1a1a]/8 text-sm">
+                      <div className="py-2.5 flex items-center justify-between gap-4">
+                        <dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-[#1a1a1a]/55">
+                          Name
+                        </dt>
+                        <dd className="text-sm font-semibold text-[#1a1a1a] text-right">
                           Mridul Sengar
                         </dd>
                       </div>
-                      <div className="py-2 flex items-center justify-between gap-4">
-                        <dt className="text-xs font-medium text-slate-500">Scholar No.</dt>
-                        <dd className="text-sm font-mono tabular-nums font-semibold text-slate-900 text-right">
+                      <div className="py-2.5 flex items-center justify-between gap-4">
+                        <dt className="font-mono text-[11px] uppercase tracking-[0.08em] text-[#1a1a1a]/55">
+                          Scholar No.
+                        </dt>
+                        <dd className="text-sm font-mono tabular-nums font-semibold text-[#1a1a1a] text-right">
                           26U010003
                         </dd>
                       </div>
@@ -1085,9 +1031,11 @@ export function HomeMenuView({
                   </div>
                 </div>
 
-                <div className="pt-3.5 border-t border-slate-200 flex items-center justify-between gap-3">
-                  <span className="text-xs text-slate-500">Course Code</span>
-                  <span className="text-sm font-mono tabular-nums font-semibold text-teal-800">
+                <div className="pt-4 border-t border-[#1a1a1a]/10 flex items-center justify-between gap-3">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#1a1a1a]/55">
+                    Course Code
+                  </span>
+                  <span className="text-sm font-mono tabular-nums font-semibold text-[#0f766e]">
                     FoCP(1003)
                   </span>
                 </div>
@@ -1097,32 +1045,33 @@ export function HomeMenuView({
         </section>
       </main>
 
-      {/* Quiet Legal Footer */}
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-slate-500">
-          <p>
-            &copy; 2026 <strong className="font-semibold text-slate-700">SpendVault</strong> ·
-            Contact:{' '}
-            <a
-              href="mailto:prakhargoyal117@gmail.com"
-              className="text-slate-700 hover:text-teal-800 hover:underline"
-            >
-              prakhargoyal117@gmail.com
-            </a>
-          </p>
-          <div className="flex items-center gap-5 shrink-0">
+      {/* Quiet Editorial Footer */}
+      <footer className="border-t border-[#1a1a1a]/10 bg-[#f2efeb]">
+        <div className="max-w-[1360px] mx-auto px-5 sm:px-8 lg:px-10 py-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs text-[#1a1a1a]/60">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+            <span>
+              &copy; 2026 <strong className="font-semibold text-[#1a1a1a]">SpendVault Ecosystem</strong>
+            </span>
+            <span className="font-mono text-[11px]">
+              Team: Prakhar Goyal (26U010002) · Mridul Sengar (26U010003)
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-6 shrink-0">
             <a
               href="/privacy.html"
-              className="font-medium text-teal-800 hover:text-teal-950 hover:underline"
+              className="font-semibold text-[#1a1a1a] hover:text-[#0f766e] hover:underline"
             >
               Privacy Policy
             </a>
             <a
               href="/terms.html"
-              className="font-medium text-slate-600 hover:text-slate-900 hover:underline"
+              className="text-[#1a1a1a]/70 hover:text-[#1a1a1a] hover:underline"
             >
               Terms of Service
             </a>
+            <span className="font-mono text-[11px] text-[#0f766e] font-medium">
+              FoCP(1003) Project
+            </span>
           </div>
         </div>
       </footer>
