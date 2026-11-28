@@ -54,6 +54,21 @@ export function decideCloudReconciliation(params: {
     return 'up_to_date';
   }
 
+  // Never overwrite a password-protected cloud vault with an unprotected local workspace
+  if (cloudEnvelope.hasCustomPassphrase && !localEnvelope?.hasCustomPassphrase) {
+    return 'prompt_cloud_unlock';
+  }
+
+  // If this browser has a password-protected vault while cloud only has an unprotected default vault,
+  // promote this browser's protected vault to cloud (unless switching accounts)
+  if (
+    !switchedAccount &&
+    localEnvelope?.hasCustomPassphrase &&
+    !cloudEnvelope.hasCustomPassphrase
+  ) {
+    return 'auto_push_local';
+  }
+
   // Fresh browser or switched Google account
   if (localBlank) {
     return cloudEnvelope.hasCustomPassphrase

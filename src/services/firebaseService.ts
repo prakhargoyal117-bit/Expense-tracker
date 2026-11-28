@@ -14,7 +14,7 @@ import {
   doc,
   getDoc,
   getDocFromServer,
-  getFirestore,
+  initializeFirestore,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -27,7 +27,12 @@ export const WORKSPACE_SCOPES = [
 ];
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+// Auto-detect long-polling prevents Firestore WebChannel stalls on Brave Shields & strict networks
+export const db = initializeFirestore(
+  app,
+  { experimentalAutoDetectLongPolling: true },
+  firebaseConfig.firestoreDatabaseId,
+);
 export const auth = getAuth(app);
 
 export interface GoogleSignInOptions {
@@ -281,12 +286,33 @@ export interface CloudVaultRecord {
   syncedAtIso: string;
 }
 
+export function formatCloudSyncError(err: unknown): string {
+  let raw = err instanceof Error ? err.message : String(err ?? '');
+  try {
+    const parsed = JSON.parse(raw) as { error?: string };
+    if (parsed && typeof parsed.error === 'string') {
+      raw = parsed.error;
+    }
+  } catch {
+    // Plain error message
+  }
+  const lower = raw.toLowerCase();
+  if (lower.includes('offline') || lower.includes('network') || lower.includes('failed to fetch')) {
+    return 'Could not reach Cloud Sync (offline or blocked by browser shields). Check your connection or allow Firestore in Brave Shields, then retry.';
+  }
+  if (lower.includes('permission') || lower.includes('insufficient')) {
+    return 'Cloud Sync permission check failed. Please sign out and sign in with Google again.';
+  }
+  return raw || 'Unable to reach Cloud Sync right now. Please retry.';
+}
+
 export async function fetchCloudEncryptedVault(
   userId: string,
 ): Promise<CloudVaultRecord | null> {
   const path = `vaults/${userId}`;
   try {
-    const snap = await getDoc(doc(db, 'vaults', userId));
+    // Always fetch authoritative server state so cross-browser vaults are never missed due to stale cache
+    const snap = await getDocFromServer(doc(db, 'vaults', userId));
     if (!snap.exists()) return null;
     const data = snap.data();
     const updatedAtIso =
@@ -322,10 +348,15 @@ export async function saveCloudEncryptedVault(
 
   let exists = false;
   try {
-    const existingSnap = await getDoc(docRef);
+    const existingSnap = await getDocFromServer(docRef);
     exists = existingSnap.exists();
-  } catch (error) {
-    handleFirestoreError(error, OperationType.GET, path);
+  } catch {
+    try {
+      const cachedSnap = await getDoc(docRef);
+      exists = cachedSnap.exists();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, path);
+    }
   }
 
   if (!exists) {
